@@ -1,0 +1,26 @@
+
+---
+
+## 8. Custom CSS (Optional)
+
+### `assets/css/extended/custom.css`
+
+```css
+/* Wider content for notes */
+.post-content {
+  max-width: 900px;
+}
+
+/* Better code blocks */
+.post-content pre {
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+/* Styled callout blockquotes */
+blockquote {
+  border-left: 4px solid var(--primary);
+  background: var(--code-bg);
+  padding: 0.5rem 1rem;
+  border-radius: 0 8px 8px 0;
+}
