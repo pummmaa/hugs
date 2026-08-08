@@ -1,1 +1,1 @@
-[{"content":"IP Configuration ip addr show ip route show sudo ip route add 10.0.0.0/24 via 192.168.1.1 ","permalink":"https://notes.yourdomain.com/linux/networking/","summary":"Essential Linux networking commands and configuration","title":"Linux Networking"}]
+[{"content":"IP Configuration ip addr show ip route show sudo ip route add 10.0.0.0/24 via 192.168.1.1 ","permalink":"https://notes.naruu.xyz/linux/networking/","summary":"Essential Linux networking commands and configuration","title":"Linux Networking"}]
