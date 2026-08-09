@@ -1,5 +1,5 @@
 ---
-title: "Moving Your Hugo Site to Another Device"
+title: "moving-your-hugo-site-to-another-device"
 date: 2026-08-09T06:03:49Z
 lastmod: 2026-08-09T06:03:49Z
 draft: false

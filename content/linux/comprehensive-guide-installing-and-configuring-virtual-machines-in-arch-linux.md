@@ -1,5 +1,5 @@
 ---
-title: "Comprehensive Guide Installing and Configuring Virtual Machines in Arch Linux"
+title: "comprehensive-guide-installing-and-configuring-virtual-machines-in-arch-linux"
 date: 2026-08-09T01:09:37Z
 lastmod: 2026-08-09T01:09:37Z
 draft: false

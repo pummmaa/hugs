@@ -1,5 +1,5 @@
 ---
-title: "Hugo Book Gruvbox Caddy Github Guide"
+title: "hugo-book-gruvbox-caddy-github-guide"
 date: 2026-08-09T05:34:24Z
 lastmod: 2026-08-09T05:34:24Z
 draft: false

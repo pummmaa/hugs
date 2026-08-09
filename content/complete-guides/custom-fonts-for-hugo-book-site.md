@@ -1,5 +1,5 @@
 ---
-title: "Custom Fonts for Hugo Book Site"
+title: "custom-fonts-for-hugo-book-site"
 date: 2026-08-09T05:56:31Z
 lastmod: 2026-08-09T05:56:31Z
 draft: false

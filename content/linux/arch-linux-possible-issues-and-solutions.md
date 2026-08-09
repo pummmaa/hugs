@@ -1,5 +1,5 @@
 ---
-title: "Arch Linux Possible Issues and Solutions"
+title: "arch-linux-possible-issues-and-solutions"
 date: 2026-08-09T00:51:06-07:00
 lastmod: 2026-08-09T00:51:06-07:00
 draft: false
