@@ -1,5 +1,5 @@
 ---
-title: "DevOps Notes"
+title: "devops-notes"
 weight: 1
 bookCollapseSection: true
 ---

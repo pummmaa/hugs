@@ -1,5 +1,5 @@
 ---
-title: "complete-guides"
+title: "window-managers"
 weight: 1
 bookCollapseSection: true
 ---
