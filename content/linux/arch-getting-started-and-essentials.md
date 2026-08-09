@@ -108,7 +108,7 @@ If an extra drive needs to be added to your machine **post installation** follow
 2. add the following entry at the bottom of the `fstab`
 	1. `/dev/mapper/extra /mnt/extra ext4 defaults 0 0`
 	2. *Note: make sure to change all values to match your drive, "extra" mount point and "partition type" needs to be change*
-![/images/Second-Drive-Fstab-Entry.png]
+![second-drive-fstab-entry](/images/Second-Drive-Fstab-Entry.png)
 3. You can now, reboot and if the drive is detected, you should be asked to enter the **drive encryption password**
 
 ### Encryption Key and crypttab
