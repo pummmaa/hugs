@@ -1,5 +1,5 @@
 baseURL: "https://notes.naruu.xyz"
-languageCode: "en-us"
+locale: "en-us"
 title: "Nottas"
 theme: "hugo-book"
 
@@ -31,6 +31,5 @@ outputs:
   home:
     - HTML
     - RSS
-    - JSON
 
 menu: {}   # Book uses folder structure for nav, no manual menu needed

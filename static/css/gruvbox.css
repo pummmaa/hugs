@@ -1,0 +1,140 @@
+/* Gruvbox Dark - override everything */
+
+:root {
+  --body-background: #282828 !important;
+  --body-font-color: #ebdbb2 !important;
+  --color-link: #83a598 !important;
+  --color-visited-link: #d3869b !important;
+}
+
+html, body {
+  background: #282828 !important;
+  color: #ebdbb2 !important;
+}
+
+body, .markdown {
+  font-family: 'Inter', sans-serif !important;
+}
+
+code, pre, pre code {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+.book-menu, .book-menu nav {
+  background: #1d2021 !important;
+}
+
+.book-menu a {
+  color: #d5c4a1 !important;
+}
+
+.book-menu a:hover {
+  color: #fabd2f !important;
+}
+
+.book-page {
+  background: #282828 !important;
+  color: #ebdbb2 !important;
+}
+
+.container, .container main {
+  background: #282828 !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #fe8019 !important;
+}
+
+a {
+  color: #83a598 !important;
+}
+
+a:hover {
+  color: #8ec07c !important;
+}
+
+code:not(pre code) {
+  background: #3c3836 !important;
+  color: #b8bb26 !important;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+pre {
+  background: #1d2021 !important;
+  border: 1px solid #504945 !important;
+  border-radius: 6px;
+}
+
+pre code {
+  background: transparent !important;
+  color: #ebdbb2 !important;
+}
+
+.book-toc {
+  background: #282828 !important;
+}
+
+.book-toc a {
+  color: #a89984 !important;
+}
+
+.book-toc a:hover {
+  color: #fabd2f !important;
+}
+
+table th {
+  background: #3c3836 !important;
+  color: #fabd2f !important;
+  border-color: #504945 !important;
+}
+
+table td {
+  border-color: #504945 !important;
+  color: #d5c4a1 !important;
+}
+
+table tr:nth-child(even) {
+  background: #32302f !important;
+}
+
+blockquote {
+  border-left: 4px solid #8ec07c !important;
+  background: #32302f !important;
+  color: #d5c4a1 !important;
+}
+
+.book-search input {
+  background: #3c3836 !important;
+  color: #ebdbb2 !important;
+  border: 1px solid #665c54 !important;
+}
+
+.book-search input::placeholder {
+  color: #a89984 !important;
+}
+
+.book-brand {
+  color: #fbf1c7 !important;
+}
+
+.book-header {
+  background: #1d2021 !important;
+}
+
+hr {
+  border-color: #504945 !important;
+}
+
+.book-footer {
+  border-color: #504945 !important;
+}
+
+.markdown {
+  color: #ebdbb2 !important;
+}
+
+::selection {
+  background: #83a598;
+  color: #282828;
+}
