@@ -44,9 +44,9 @@ params:
 
   # Homepage info section
   homeInfoParams:
-    Title: "📝 My Knowledge Base"
+    Title: "📝 Publico Guides & Larning Abilidades"
     Content: >
-      Personal notes on Linux, DevOps, Programming, and more.
+      Notes, guides, blogs, and other markdown based items that I can access anywhere! 
       Use the search or browse by category below.
 
   # Social icons
