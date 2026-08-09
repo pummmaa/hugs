@@ -2,7 +2,7 @@
 title: "Hugo Troubleshooting Guide"
 date: 2026-08-09T18:49:26Z
 lastmod: 2026-08-09T18:49:26Z
-draft: true
+draft: false
 tags: []
 categories: []
 series: []
