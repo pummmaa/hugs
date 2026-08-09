@@ -12,14 +12,6 @@ TocOpen: true
 weight: 10
 ---
 
-# Table Of Content
-
-[[#Network Related]]
-- [[#Wireguard Tools]]
-- [[#Fonts No Loading/Showing]]
-- [[#Tuta Email Client/Apps Storing Keys]]
-- [[#Neovim Stylua Failing to install]]
-
 ## Network Related
 ### Wireguard Tools
 Follow the **tldr** solution below
