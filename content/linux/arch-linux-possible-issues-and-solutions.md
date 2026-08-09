@@ -12,7 +12,7 @@ TocOpen: true
 weight: 10
 ---
 
-## Network Related Related Test
+## Network Related
 ### Wireguard Tools
 Follow the **tldr** solution below
 **Issue:** 
