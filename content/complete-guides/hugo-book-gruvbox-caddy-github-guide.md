@@ -3,12 +3,8 @@ title: "Hugo Book Gruvbox Caddy Github Guide"
 date: 2026-08-09T05:34:24Z
 lastmod: 2026-08-09T05:34:24Z
 draft: false
-tags: []
-categories: []
-series: []
-summary: ""
-ShowToc: true
-TocOpen: true
+tags: ["hugo", "caddy", "github", "gruvbox"]
+categories: ["guides"]
 weight: 10
 ---
 
@@ -25,7 +21,7 @@ weight: 10
 
 ## Architecture
 
-```
+```text
 ┌──────────────┐         ┌──────────────────┐       ┌───────────────┐
 │ GitHub Repo  │─webhook─▶│  Hugo + Book     │──────▶│ Caddy (Serve) │──▶ Users
 │ (Markdown)   │         │ /home/debian/hugs│       │ Auto HTTPS    │
@@ -38,8 +34,8 @@ weight: 10
 
 ```bash
 # Hugo Extended (required for SCSS)
-wget https://github.com/gohugoio/hugo/releases/download/v0.140.1/hugo_extended_0.140.1_linux-amd64.deb
-sudo dpkg -i hugo_extended_0.140.1_linux-amd64.deb
+wget https://github.com/gohugoio/hugo/releases/download/v0.164.0/hugo_extended_0.164.0_linux-amd64.deb
+sudo dpkg -i hugo_extended_0.164.0_linux-amd64.deb
 hugo version  # Must say "extended"
 
 # Caddy
@@ -71,7 +67,7 @@ git submodule add --depth=1 https://github.com/alex-shpak/hugo-book.git themes/h
 
 ---
 
-## 3. Hugo Configuration (`hugo.yaml`)
+## 3. Hugo Configuration
 
 Delete any `hugo.toml` and create `hugo.yaml`:
 
@@ -79,7 +75,7 @@ Delete any `hugo.toml` and create `hugo.yaml`:
 rm -f hugo.toml
 ```
 
-**Contents of `hugo.yaml`:**
+Contents of `hugo.yaml`:
 
 ```yaml
 baseURL: "https://yourdomain.com"
@@ -115,7 +111,6 @@ outputs:
   home:
     - HTML
     - RSS
-    - JSON
 
 menu: {}
 ```
@@ -126,7 +121,7 @@ menu: {}
 
 ## 4. Create Content Structure
 
-### Homepage (`content/_index.md`)
+### 4.1 Homepage — `content/_index.md`
 
 ```markdown
 ---
@@ -159,11 +154,10 @@ This site is a living knowledge base covering topics in **Linux**, **DevOps**, *
 Pick a topic from the sidebar and start exploring. Happy learning. 🚀
 ```
 
-### Section pages
-
-Create these `_index.md` files in each section directory:
+### 4.2 Section Pages
 
 **`content/linux/_index.md`:**
+
 ```markdown
 ---
 title: "Linux"
@@ -173,6 +167,7 @@ bookCollapseSection: true
 ```
 
 **`content/devops/_index.md`:**
+
 ```markdown
 ---
 title: "DevOps"
@@ -182,6 +177,7 @@ bookCollapseSection: true
 ```
 
 **`content/programming/_index.md`:**
+
 ```markdown
 ---
 title: "Programming"
@@ -191,6 +187,7 @@ bookCollapseSection: true
 ```
 
 **`content/networking/_index.md`:**
+
 ```markdown
 ---
 title: "Networking"
@@ -199,11 +196,11 @@ bookCollapseSection: true
 ---
 ```
 
-### Archetype template (`archetypes/default.md`)
+### 4.3 Archetype Template — `archetypes/default.md`
 
 ```markdown
 ---
-title: "{{ replace .Name \"-\" \" \" | title }}"
+title: "{{ replace .Name "-" " " | title }}"
 date: {{ .Date }}
 draft: true
 weight: 10
@@ -218,7 +215,7 @@ Write your notes here...
 
 ## 5. Gruvbox Dark Theme
 
-### Create CSS file (`static/css/gruvbox.css`)
+### 5.1 Create CSS File — `static/css/gruvbox.css`
 
 ```css
 :root {
@@ -353,7 +350,7 @@ hr {
 }
 ```
 
-### Inject CSS into theme (`layouts/partials/docs/inject/head.html`)
+### 5.2 Inject CSS Into Theme — `layouts/partials/docs/inject/head.html`
 
 ```html
 <link rel="stylesheet" href="/css/gruvbox.css">
@@ -363,7 +360,9 @@ hr {
 
 ## 6. .gitignore
 
-```
+Create `.gitignore` in the project root:
+
+```text
 public/
 resources/
 .hugo_build.lock
@@ -373,7 +372,7 @@ resources/
 
 ## 7. System Permissions
 
-### Create shared group and set membership
+### 7.1 Create Shared Group and Set Membership
 
 ```bash
 sudo groupadd webdata
@@ -381,7 +380,7 @@ sudo usermod -aG webdata debian
 sudo usermod -aG webdata caddy
 ```
 
-### Set file ownership and permissions
+### 7.2 Set File Ownership and Permissions
 
 ```bash
 sudo chown -R debian:webdata /home/debian/hugs
@@ -390,7 +389,7 @@ sudo find /home/debian/hugs -type f -exec chmod 640 {} \;
 chmod 711 /home/debian
 ```
 
-### Fix Caddy's systemd ProtectHome (if set)
+### 7.3 Fix Caddy's Systemd ProtectHome (If Set)
 
 ```bash
 # Check
@@ -418,7 +417,7 @@ sudo systemctl daemon-reload
 sudo systemctl restart caddy
 ```
 
-### Permissions summary
+### 7.4 Permissions Summary
 
 | Path | Owner | Group | Mode | Purpose |
 |------|-------|-------|------|---------|
@@ -431,7 +430,9 @@ sudo systemctl restart caddy
 
 ---
 
-## 8. Caddy Configuration (`/etc/caddy/Caddyfile`)
+## 8. Caddy Configuration
+
+Create `/etc/caddy/Caddyfile`:
 
 ```caddyfile
 yourdomain.com {
@@ -492,7 +493,9 @@ sudo systemctl restart caddy
 
 ---
 
-## 9. Deploy Script (`deploy.sh`)
+## 9. Deploy Script
+
+Create `deploy.sh` in the project root:
 
 ```bash
 #!/bin/bash
@@ -517,6 +520,8 @@ find "$SITE_DIR/public" -type f -exec chmod 640 {} \;
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Deploy complete" >> "$LOG"
 ```
 
+Set permissions and create log file:
+
 ```bash
 chmod 750 /home/debian/hugs/deploy.sh
 sudo touch /var/log/hugo-deploy.log
@@ -526,7 +531,9 @@ sudo chmod 664 /var/log/hugo-deploy.log
 
 ---
 
-## 10. Rebuild Script (`rebuild.sh`) — For Manual Rebuilds
+## 10. Rebuild Script (Manual Rebuilds)
+
+Create `rebuild.sh` in the project root:
 
 ```bash
 #!/bin/bash
@@ -546,14 +553,14 @@ chmod 750 /home/debian/hugs/rebuild.sh
 
 ## 11. Webhook (Auto-Deploy on Push)
 
-### Generate the secret
+### 11.1 Generate the Secret
 
 ```bash
 openssl rand -hex 20
 # Save this output — used in two places below
 ```
 
-### Webhook config (`/etc/webhook/hooks.json`)
+### 11.2 Webhook Config — `/etc/webhook/hooks.json`
 
 ```json
 [
@@ -591,7 +598,7 @@ openssl rand -hex 20
 
 > **Replace `YOUR_SECRET_HERE` with the output from `openssl rand -hex 20`.**
 
-### Webhook systemd service (`/etc/systemd/system/webhook.service`)
+### 11.3 Webhook Systemd Service — `/etc/systemd/system/webhook.service`
 
 ```ini
 [Unit]
@@ -602,7 +609,7 @@ After=network.target
 Type=simple
 User=debian
 Group=debian
-ExecStart=/usr/bin/webhook -hooks /etc/webhook/hooks.json -port 9000 -verbose
+ExecStart=/usr/bin/webhook -hooks /etc/webhook/hooks.json -port 9000 -ip 127.0.0.1 -verbose
 Restart=on-failure
 RestartSec=5
 
@@ -617,7 +624,7 @@ sudo systemctl start webhook
 sudo systemctl status webhook  # Should say "active (running)"
 ```
 
-### Verify webhook works locally
+### 11.4 Verify Webhook Works Locally
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}" http://localhost:9000/hooks/hugo-deploy
@@ -628,13 +635,13 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:9000/hooks/hugo-deploy
 
 ## 12. Push to GitHub
 
-### Create the repo
+### 12.1 Create the Repo
 
 1. Go to [github.com/new](https://github.com/new)
 2. Name: `hugs`
 3. Do NOT initialize with README
 
-### Push
+### 12.2 Push
 
 ```bash
 cd /home/debian/hugs
@@ -644,7 +651,7 @@ git remote add origin git@github.com:yourusername/hugs.git
 git push -u origin main
 ```
 
-### Configure GitHub webhook
+### 12.3 Configure GitHub Webhook
 
 1. Repo → **Settings → Webhooks → Add webhook**
 2. Fill in:
@@ -686,7 +693,7 @@ sudo ufw enable
 
 ## 15. Day-to-Day Workflow
 
-### Add a new note
+### 15.1 Add a New Note
 
 ```bash
 cd /home/debian/hugs
@@ -694,7 +701,7 @@ hugo new content/linux/my-note.md
 nano content/linux/my-note.md
 ```
 
-### Publish it
+### 15.2 Publish It
 
 Change `draft: true` → `draft: false`, then:
 
@@ -706,11 +713,11 @@ git push
 
 Site auto-rebuilds via webhook. Done.
 
-### Save as draft (in repo but hidden from live site)
+### 15.3 Save as Draft (In Repo but Hidden From Live Site)
 
 Keep `draft: true` and push normally.
 
-### Delete a note
+### 15.4 Delete a Note
 
 ```bash
 rm content/section/note.md
@@ -719,13 +726,14 @@ git commit -m "Remove note"
 git push
 ```
 
-### Add a new section
+### 15.5 Add a New Section
 
 ```bash
 mkdir -p content/newsection
 ```
 
 Create `content/newsection/_index.md`:
+
 ```markdown
 ---
 title: "New Section"
@@ -734,7 +742,7 @@ bookCollapseSection: true
 ---
 ```
 
-### Manual rebuild (if webhook isn't working)
+### 15.6 Manual Rebuild (If Webhook Isn't Working)
 
 ```bash
 ~/hugs/rebuild.sh
@@ -744,7 +752,7 @@ bookCollapseSection: true
 
 ## 16. Frontmatter Reference
 
-### Minimal (most notes)
+### Minimal (Most Notes)
 
 ```markdown
 ---
@@ -755,7 +763,7 @@ weight: 10
 ---
 ```
 
-### Full options
+### Full Options
 
 ```markdown
 ---
@@ -773,7 +781,7 @@ bookToC: false              # Disable TOC for this page
 
 ## 17. Directory Structure (Final)
 
-```
+```text
 /home/debian/hugs/
 ├── .gitignore
 ├── archetypes/
@@ -796,7 +804,8 @@ bookToC: false              # Disable TOC for this page
 │   └── partials/
 │       └── docs/
 │           └── inject/
-│               └── head.html  # Loads gruvbox.css
+│               ├── head.html           # Loads gruvbox.css
+│               └── content-before.html # Raw markdown button
 ├── static/
 │   └── css/
 │       └── gruvbox.css        # Gruvbox dark theme
@@ -816,7 +825,7 @@ bookToC: false              # Disable TOC for this page
 | New note | `hugo new content/section/name.md` |
 | Publish draft | Change `draft: true` → `draft: false` |
 | Preview locally | `hugo server -D --bind 0.0.0.0 --port 1313` |
-| Push & deploy | `git add . && git commit -m "msg" && git push` |
+| Push and deploy | `git add . && git commit -m "msg" && git push` |
 | Manual rebuild | `~/hugs/rebuild.sh` |
 | Delete note | `rm content/section/name.md && git add -A && git commit -m "rm" && git push` |
 | Update theme | `git submodule update --remote themes/hugo-book && git add . && git commit -m "Update theme" && git push` |
