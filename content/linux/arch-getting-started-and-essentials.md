@@ -123,7 +123,7 @@ If an extra drive needs to be added to your machine **post installation** follow
 		2. **/dev/drive** = drive label location
 		3. **none** = tell linux to ask for the drive encryption password on boot
 3. After both options have been added, see *image below* proceed to creating a **encryption key**
-![/images/crypttab-example-2nd-drive-encypt.png]
+![crypttab-example-2nd-drive](/images/crypttab-example-2nd-drive-encypt.png)
 4. Generate LUKS key using **OpenSSL**
 	1. `openssl rand -out /path/to/your/keyfile 4096`
 5. Change permission to `read` only by `root`
