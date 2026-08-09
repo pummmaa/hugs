@@ -2,7 +2,7 @@
 title: "Test"
 date: 2026-08-08T20:48:24Z
 lastmod: 2026-08-08T20:48:24Z
-draft: true
+draft: false
 tags: []
 categories: []
 series: []

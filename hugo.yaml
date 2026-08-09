@@ -24,7 +24,7 @@ params:
   env: production
   title: "My Notes"
   description: "Personal knowledge base and technical notes"
-  author: "Ricardo"
+  author: ""
 
   # Theme
   defaultTheme: auto
@@ -72,8 +72,8 @@ params:
 
   # "Edit on GitLab" link on every page
   editPost:
-    URL: "https://gitlab.com/yourusername/hugs/edit/main/content"
-    Text: "Edit on GitLab"
+    #URL: "https://gitlab.com/yourusername/hugs/edit/main/content"
+    #Text: "Edit on GitLab"
     appendFilePath: true
 
   # Assets
