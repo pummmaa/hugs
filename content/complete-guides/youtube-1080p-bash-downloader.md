@@ -1,5 +1,5 @@
 ---
-title: "Youtube 1080p Bash Downloader"
+title: "youtube-1080p-bash-downloader"
 date: 2026-08-11T05:46:11Z
 lastmod: 2026-08-11T05:46:11Z
 draft: false
