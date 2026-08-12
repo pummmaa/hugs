@@ -1,0 +1,41 @@
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('pre > code').forEach(function(codeBlock) {
+    var pre = codeBlock.parentNode;
+    pre.style.position = 'relative';
+
+    var button = document.createElement('button');
+    button.innerText = '📋 Copy';
+    button.style.position = 'absolute';
+    button.style.top = '6px';
+    button.style.right = '6px';
+    button.style.padding = '4px 10px';
+    button.style.fontSize = '0.75rem';
+    button.style.background = '#3c3836';
+    button.style.color = '#b8bb26';
+    button.style.border = '1px solid #504945';
+    button.style.borderRadius = '4px';
+    button.style.cursor = 'pointer';
+    button.style.opacity = '0.7';
+    button.style.transition = 'opacity 0.2s';
+
+    button.addEventListener('mouseenter', function() {
+      button.style.opacity = '1';
+    });
+    button.addEventListener('mouseleave', function() {
+      button.style.opacity = '0.7';
+    });
+
+    button.addEventListener('click', function() {
+      navigator.clipboard.writeText(codeBlock.textContent).then(function() {
+        button.innerText = '✅ Copied!';
+        setTimeout(function() {
+          button.innerText = '📋 Copy';
+        }, 2000);
+      });
+    });
+
+    pre.appendChild(button);
+  });
+});
+</script>
