@@ -37,7 +37,7 @@ python --version        # if 3.13.x -> that's the problem
 
 ```bash
 sudo pacman -Syu
-sudo pacman -S v4l-utils linux-headers base-devel git
+sudo pacman -S v4l-utils linux-headers base-devel git ffmpeg
 
 # Python 3.12 (MediaPipe does NOT support 3.13 yet).
 # Arch ships 3.13 as default `python`, so install 3.12 from AUR:
@@ -188,6 +188,8 @@ def parse_args():
                    help="Auto-detect and use the camera's MAX resolution for the chosen --fourcc (needs v4l-utils). Overrides --width/--height.")
     p.add_argument("--list-formats", action="store_true",
                    help="List the camera's supported formats + resolutions, then exit.")
+    p.add_argument("--backend", type=str, default="ffmpeg", choices=["ffmpeg", "opencv"],
+                   help="Capture backend. 'ffmpeg' (default) handles NV12/YUYV stride reliably at all resolutions; 'opencv' uses cv2.VideoCapture (fine for MJPG cams like Brio).")
     # Models
     p.add_argument("--seg-model", type=str, default="selfie_segmenter.tflite", help="Segmenter .tflite")
     p.add_argument("--face-model", type=str, default="blaze_face_short_range.tflite", help="Face .tflite")
@@ -301,6 +303,78 @@ def normalize_bgr(frame, w, h):
     return frame
 
 
+class FFmpegCapture:
+    """Capture frames via an ffmpeg subprocess that outputs raw BGR24. This bypasses
+    OpenCV's V4L2 path, which mishandles NV12 stride at higher resolutions (green/distorted/
+    zoomed image). ffmpeg negotiates the format and hands us clean, correctly-sized frames."""
+    IFMT = {"NV12": "nv12", "YUYV": "yuyv422", "YUY2": "yuyv422", "MJPG": "mjpeg"}
+
+    def __init__(self, device, w, h, fps, fourcc):
+        self.width, self.height, self.fps = w, h, fps
+        self._nbytes = w * h * 3
+        cmd = ["ffmpeg", "-loglevel", "error", "-f", "v4l2"]
+        ifmt = self.IFMT.get(fourcc.upper())
+        if ifmt:
+            cmd += ["-input_format", ifmt]
+        cmd += ["-video_size", f"{w}x{h}", "-framerate", str(fps),
+                "-i", device, "-pix_fmt", "bgr24", "-f", "rawvideo", "-"]
+        self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    def _read_exact(self, n):
+        chunks, got = [], 0
+        while got < n:
+            c = self.proc.stdout.read(n - got)
+            if not c:
+                return None
+            chunks.append(c); got += len(c)
+        return b"".join(chunks)
+
+    def read(self):
+        buf = self._read_exact(self._nbytes)
+        if buf is None:
+            return False, None
+        return True, np.frombuffer(buf, np.uint8).reshape(self.height, self.width, 3)
+
+    def stderr_text(self):
+        try:
+            return self.proc.stderr.read().decode(errors="ignore")
+        except Exception:
+            return ""
+
+    def release(self):
+        try:
+            self.proc.terminate()
+            self.proc.wait(timeout=2)
+        except Exception:
+            try:
+                self.proc.kill()
+            except Exception:
+                pass
+
+
+def open_capture(args, device_path):
+    """Return (cap, width, height, fps). cap exposes .read()/.release(). None on failure."""
+    fourcc = args.fourcc.upper()
+    if args.backend == "ffmpeg":
+        cap = FFmpegCapture(device_path, args.width, args.height, args.fps, fourcc)
+        return cap, cap.width, cap.height, cap.fps
+    # OpenCV backend
+    cap = cv2.VideoCapture(args.input)
+    if fourcc == "MJPG":                      # only force MJPG (compressed) to cut USB bandwidth
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    cap.set(cv2.CAP_PROP_CONVERT_RGB, 1.0)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, args.width)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args.height)
+    cap.set(cv2.CAP_PROP_FPS, args.fps)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    if not cap.isOpened():
+        return None, 0, 0, 0
+    aw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    ah = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    afps = int(cap.get(cv2.CAP_PROP_FPS)) or args.fps
+    return cap, aw, ah, afps
+
+
 def main():
     args = parse_args()
     device_path = f"/dev/video{args.input}"
@@ -381,35 +455,13 @@ def main():
         detector = vision.FaceDetector.create_from_options(det_opts)
         smooth = SmoothPosition(args.smoothing)
 
-    cap = cv2.VideoCapture(args.input)
-    # Pixel format must be set BEFORE resolution.
-    #   MJPG (compressed) — needed for high-res UVC cams (Brio) to avoid
-    #     'not enough bandwidth for new device state' USB errors.
-    #   YUYV (uncompressed) — required for cams that do NOT expose MJPG (e.g. Opal C1);
-    #     forcing MJPG on those raises 'cannot find proper format for codec mjpeg'.
-    #   NONE — let the driver pick its default format.
-    fourcc = args.fourcc.upper()
-    # Only FORCE MJPG (compressed) — this is what cuts USB bandwidth for cams like the Brio.
-    # For UNCOMPRESSED formats (NV12, YUYV) do NOT force the FOURCC: doing so makes OpenCV
-    # return the raw YUV buffer, which looks greenish/distorted AND mis-scaled ("zoomed in").
-    # Instead, let OpenCV negotiate the format from the requested resolution and convert to BGR.
-    if fourcc == "MJPG":
-        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-    cap.set(cv2.CAP_PROP_CONVERT_RGB, 1.0)   # ask OpenCV to deliver BGR, not raw YUV
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, args.width)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args.height)
-    cap.set(cv2.CAP_PROP_FPS, args.fps)
-    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-    if not cap.isOpened():
+    cap, aw, ah, afps = open_capture(args, device_path)
+    if cap is None:
         print(f"ERROR: cannot open camera {args.input}")
         sys.exit(1)
-
-    aw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    ah = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    afps = int(cap.get(cv2.CAP_PROP_FPS)) or args.fps
     if (aw, ah) != (args.width, args.height):
-        print(f"WARNING: requested {args.width}x{args.height} but camera delivered {aw}x{ah} "
-              f"(the driver may have clamped it for this format/bandwidth).")
+        print(f"WARNING: requested {args.width}x{args.height} but got {aw}x{ah} "
+              f"(driver/backend may have clamped it).")
     print(f"Input {aw}x{ah}@{afps} | Output {out_w}x{out_h} -> {args.output}")
     print(f"Blur={'off' if args.no_blur else blur} | AutoFrame={'on' if args.auto_frame else 'off'}")
     print("Ctrl+C to stop.\n")
@@ -426,11 +478,21 @@ def main():
                              fmt=pyvirtualcam.PixelFormat.BGR) as vcam:
         print(f"Virtual camera active: {vcam.device}\n")
         n = 0
+        fail = 0
         t0 = time.time()
         while running:
             ok, frame = cap.read()
             if not ok:
+                fail += 1
+                if fail > 30:
+                    print("ERROR: no frames from camera. Check --backend/--fourcc/resolution.")
+                    if isinstance(cap, FFmpegCapture):
+                        err = cap.stderr_text()
+                        if err:
+                            print("ffmpeg said:\n" + err)
+                    break
                 continue
+            fail = 0
             frame = normalize_bgr(frame, aw, ah)
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
@@ -606,6 +668,33 @@ python blur_cam.py --width 640 --height 480 --fps 30
 python blur_cam.py --width 1280 --height 720 --fps 24
 ```
 
+### Signature: only 720p works, everything higher is green/distorted/zoomed
+
+If **720p looks fine but every higher resolution is corrupt**, the camera is almost certainly
+on a **USB 2.0 link (480 Mbps)** — uncompressed NV12 only fits at 720p. NV12 @ 30fps needs:
+
+| Resolution | Bandwidth | Fits USB 2.0? |
+| --- | --- | --- |
+| 1280x720 | ~332 Mbps | ✅ yes |
+| 1920x1080 | ~746 Mbps | ❌ no |
+| 2560x1440 | ~1.3 Gbps | ❌ no |
+| 3840x2160 | ~3 Gbps | ❌ no (USB 3.0 only) |
+
+Confirm and fix:
+
+```bash
+lsusb -t                       # Opal shows 480M (USB 2.0 = problem) vs 5000M (USB 3.0)
+sudo dmesg -T | grep -iE 'bandwidth|no space' | tail
+```
+
+- Plug **directly** into a blue USB 3.0 / USB-C port with a USB 3.0 cable (no hub/splitter),
+then 1080p/1440p/4K have the bandwidth they need.
+- **Stuck on USB 2.0?** Trade FPS for resolution — 1080p fits at ~15fps:
+```bash
+python blur_cam.py -i 4 --fourcc auto --width 1920 --height 1080 --fps 15 --auto-frame
+```
+1440p/4K won't fit USB 2.0 at any usable framerate.
+
 ### Fix 4 — Remove other devices sharing the bus
 
 Other cameras, capture cards, external drives, or audio interfaces on the **same USB controller** compete for bandwidth. Unplug them or move the Brio to a different physical controller. `lsusb -t` shows which devices share a bus.
@@ -683,6 +772,9 @@ you can see the driver clamped it.
 > **Colors greenish or image mis-scaled/zoomed?** That's the raw-YUV pitfall: the script no longer forces the FOURCC for NV12/YUYV (only for MJPG) and calls `cv2.CAP_PROP_CONVERT_RGB` plus a `normalize_bgr()` safety net, so grab the latest `blur_cam.py`. If it still looks too tight, that's the `--auto-frame` crop — raise `--zoom` (e.g. `--zoom 0.9`) or run without `--auto-frame`.
 > 
 
+> **Still green/distorted only at higher resolutions on a USB 3.0 link?** OpenCV's V4L2 path mishandles NV12 stride above 720p. Use the default `--backend ffmpeg`, which captures via an `ffmpeg` subprocess and delivers clean BGR frames at any resolution (`sudo pacman -S ffmpeg`).
+> 
+
 ---
 
 ## 5. Usage
@@ -724,6 +816,7 @@ Then in Zoom/Meet/Teams pick **"Virtual_Blur_Cam"** as the camera.
 | `--fourcc` |  | `MJPG` | Capture format: `MJPG` (Brio), `YUYV`/`NV12` (Opal C1), `AUTO`, or `NONE`. Auto-falls back if unsupported. |
 | `--max-res` |  | off | Auto-detect & use the camera's max resolution for `--fourcc` (needs v4l-utils) |
 | `--list-formats` |  | off | Print the camera's supported formats + resolutions, then exit |
+| `--backend` |  | `ffmpeg` | Capture backend: `ffmpeg` (robust NV12/YUYV at all res) or `opencv` |
 | `--seg-model` |  | `selfie_segmenter.tflite` | Segmenter model path |
 | `--face-model` |  | `blaze_face_short_range.tflite` | Face model path |
 | `--blur-strength` | `-b` | `21` | Blur kernel (auto-forced odd) |
@@ -788,12 +881,14 @@ journalctl -u webcam-blur.service -f
 | `cannot find proper format for codec mjpeg` | Camera has no MJPG (e.g. Opal C1). Use `--fourcc YUYV` (or `NONE`). See the Opal C1 section. |
 | Greenish / distorted colors (NV12/YUYV cams) | Don't force the FOURCC on uncompressed cams — update to the latest script (only MJPG is forced; `CAP_PROP_CONVERT_RGB` + `normalize_bgr` handle the rest). |
 | Image looks overly "zoomed in" | Two causes: (a) raw-YUV mis-scaling — fixed by the color fix above; (b) `--auto-frame` crop — raise `--zoom` (e.g. `0.9`) or drop `--auto-frame`. |
+| Only 720p is clean; higher res green/corrupt | USB 2.0 bandwidth ceiling — NV12 only fits at 720p on USB 2.0. Use a USB 3.0 port/cable, or `--fps 15` at 1080p. See the USB bandwidth section. |
+| Green/distorted at higher res **even on USB 3.0** | OpenCV mishandles NV12 stride. Use the default `--backend ffmpeg` (needs `ffmpeg` installed). |
 
 ---
 
 ## 9. Dependency Summary
 
-**pacman:** `v4l-utils linux-headers base-devel git`
+**pacman:** `v4l-utils linux-headers base-devel git ffmpeg`
 **AUR:** `python312` (or pyenv/uv for a 3.12 interpreter), `v4l2loopback-dkms`
 **pip (in a Python 3.12 venv):** `mediapipe opencv-python-headless numpy pyvirtualcam`
 **Model files:** `selfie_segmenter.tflite`, `blaze_face_short_range.tflite`
