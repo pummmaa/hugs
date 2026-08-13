@@ -676,3 +676,23 @@ v4l2loopback (loaded via modprobe)
 ## License
 
 This guide and script are provided as-is under MIT license. MediaPipe is licensed under Apache 2.0.
+
+```python
+Traceback (most recent call last):
+  File "/home/toniiz/Documents/cams/webcam-blur/blur_cam.py", line 358, in <module>
+    main()
+    ~~~~^^
+  File "/home/toniiz/Documents/cams/webcam-blur/blur_cam.py", line 195, in main
+    mp_selfie = mp.solutions.selfie_segmentation
+                ^^^^^^^^^^^^
+AttributeError: module 'mediapipe' has no attribute 'solutions'
+(.venv) Tiny-Lenovo-Archy% python blur_cam.py --auto-frame
+Traceback (most recent call last):
+  File "/home/toniiz/Documents/cams/webcam-blur/blur_cam.py", line 358, in <module>
+    main()
+    ~~~~^^
+  File "/home/toniiz/Documents/cams/webcam-blur/blur_cam.py", line 195, in main
+    mp_selfie = mp.solutions.selfie_segmentation
+                ^^^^^^^^^^^^
+AttributeError: module 'mediapipe' has no attribute 'solutions'
+```
