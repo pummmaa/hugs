@@ -271,6 +271,9 @@ def main():
         smooth = SmoothPosition(args.smoothing)
 
     cap = cv2.VideoCapture(args.input)
+    # Force MJPG (compressed) — critical for high-res UVC cams (Brio) to avoid
+    # 'not enough bandwidth for new device state' USB errors. Must be set BEFORE resolution.
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, args.width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args.height)
     cap.set(cv2.CAP_PROP_FPS, args.fps)
@@ -363,6 +366,134 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+---
+
+## Fixing `Killed` (process terminated by the OS)
+
+`Killed` = the process received **SIGKILL (signal 9)**. On Linux this is almost always the **OOM (out-of-memory) killer**, occasionally a corrupt model file.
+
+### Step 1 — Diagnose
+
+```bash
+# Was it the OOM killer? (look for 'Out of memory' / 'oom-kill' / 'Killed process')
+sudo dmesg -T | grep -iE 'oom|killed process|out of memory' | tail
+
+# How much RAM/swap is available?
+free -h
+
+# Verify model files are real (not tiny HTML error pages from a failed wget)
+ls -lh selfie_segmenter.tflite blaze_face_short_range.tflite
+#   selfie_segmenter.tflite       ~1.2 MB
+#   blaze_face_short_range.tflite ~230 KB
+file selfie_segmenter.tflite      # must NOT say 'HTML document'
+```
+
+If `dmesg` shows an OOM line -> it's memory. If the `.tflite` files are a few KB or `file` says HTML -> re-download them (section 3).
+
+### Step 2 — Reduce memory use
+
+```bash
+# Lower capture resolution (biggest single win)
+python blur_cam.py --width 640 --height 480 --auto-frame
+
+# Cap the ML thread count so TFLite/XNNPACK doesn't spike RAM & CPU
+export OMP_NUM_THREADS=2
+export MEDIAPIPE_DISABLE_GPU=1     # force CPU, avoid GL buffer allocations
+python blur_cam.py --width 640 --height 480
+
+# Blur is the heaviest stage — run auto-frame only to test
+python blur_cam.py --auto-frame --no-blur
+```
+
+### Step 3 — Add swap if you have low RAM (< 8 GB)
+
+A quick temporary 4 GB swap file:
+
+```bash
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+free -h                     # confirm swap is now listed
+# To make permanent, add to /etc/fstab:
+echo '/swapfile none swap defaults 0 0' | sudo tee -a /etc/fstab
+```
+
+### Step 4 — Re-download models if corrupt
+
+```bash
+rm -f selfie_segmenter.tflite blaze_face_short_range.tflite
+wget -O selfie_segmenter.tflite \
+  https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite
+wget -O blaze_face_short_range.tflite \
+  https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite
+```
+
+> Tip: close memory-hungry apps (browsers especially) while testing. Once it runs at 640x480, step resolution back up (960x540, then 1280x720) to find your machine's ceiling.
+> 
+
+---
+
+## Fixing `not enough bandwidth for new device state` (USB error)
+
+This kernel/USB error means the webcam requested a video stream whose bandwidth **exceeds what the USB controller can allocate**. It is the #1 issue with 4K cams like the Logitech Brio, because uncompressed video is huge:
+
+| Format @ 1280x720 @ 30fps | Approx. bandwidth |
+| --- | --- |
+| Uncompressed (YUY2) | ~660 Mbps |
+| **MJPG (compressed)** | **~60-80 Mbps** |
+
+### Fix 1 — Force MJPG in the script (already applied above)
+
+```python
+# Must be set BEFORE width/height:
+cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+```
+
+Verify the camera actually supports MJPG at your resolution:
+
+```bash
+v4l2-ctl -d /dev/video0 --list-formats-ext
+# Look for a 'MJPG' / 'Motion-JPEG' block with your resolution + framerate
+```
+
+### Fix 2 — Check the USB connection speed
+
+The Brio needs a **USB 3.0** link (5 Gbps). If it negotiated USB 2.0 (480 Mbps) you'll starve for bandwidth:
+
+```bash
+lsusb -t
+# Find the Brio. It should show 5000M (USB 3.0).
+# If it shows 480M -> it's on a USB 2.0 link.
+```
+
+- Plug **directly** into a **blue USB 3.0 / USB-C** port on the machine — **not** a hub, keyboard passthrough, or front-panel splitter.
+- Try a different port; front-panel ports often share one controller.
+- Use the cable that came with the Brio (some cheap cables are USB 2.0 only).
+
+### Fix 3 — Lower resolution / FPS to fit the available bandwidth
+
+```bash
+python blur_cam.py --width 640 --height 480 --fps 30
+# or drop framerate
+python blur_cam.py --width 1280 --height 720 --fps 24
+```
+
+### Fix 4 — Remove other devices sharing the bus
+
+Other cameras, capture cards, external drives, or audio interfaces on the **same USB controller** compete for bandwidth. Unplug them or move the Brio to a different physical controller. `lsusb -t` shows which devices share a bus.
+
+### Quick test outside Python
+
+Confirm the camera streams at all with MJPG (rules out the script):
+
+```bash
+# ffplay from ffmpeg package
+ffplay -f v4l2 -input_format mjpeg -video_size 1280x720 /dev/video0
+```
+
+If this works but the script still errors, the FOURCC line isn't taking effect — make sure it's set before width/height.
 
 ---
 
@@ -462,6 +593,7 @@ journalctl -u webcam-blur.service -f
 | Face not detected | Lower `--face-confidence` (e.g. 0.5) / improve lighting. |
 | Permission denied `/dev/video*` | `sudo usermod -aG video $USER` then re-login. |
 | Preview window won't open | Install `opencv-python` (not `-headless`). |
+| `Killed` (SIGKILL) | OOM killer — see the "Fixing `Killed`" section: lower resolution, cap threads, add swap. |
 
 ---
 
