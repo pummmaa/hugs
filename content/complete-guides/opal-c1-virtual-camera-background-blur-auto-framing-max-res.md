@@ -183,7 +183,7 @@ def parse_args():
     p.add_argument("--height", "-H", type=int, default=720, help="Capture height")
     p.add_argument("--fps", "-f", type=int, default=30, help="Target FPS")
     p.add_argument("--fourcc", type=str, default="MJPG",
-                   help="Capture pixel format: MJPG (default, Brio), YUYV (Opal C1 & other uncompressed-only cams), or NONE to let the driver choose.")
+                   help="Capture pixel format: MJPG (default, Brio), YUYV/NV12 (uncompressed cams like the Opal C1), AUTO (pick the camera's best-supported format), or NONE (driver default). If the requested format is not supported, the script auto-falls back to one that is.")
     p.add_argument("--max-res", action="store_true",
                    help="Auto-detect and use the camera's MAX resolution for the chosen --fourcc (needs v4l-utils). Overrides --width/--height.")
     p.add_argument("--list-formats", action="store_true",
@@ -295,15 +295,42 @@ def main():
         print_formats(device_path)
         sys.exit(0)
 
-    # Auto-detect the camera's max resolution for the chosen format (before deriving output size)
+    # Enumerate what the camera actually supports, then pick a usable capture format.
+    # This fixes the common case where the default MJPG isn't offered (e.g. the Opal C1
+    # only exposes NV12) — we auto-fall back to a supported format instead of silently
+    # ignoring the request and dropping to a low default resolution.
+    fmts = list_v4l2_formats(device_path)            # {FOURCC: [(w, h), ...]}
+    req = args.fourcc.upper()
+    chosen = req
+    if fmts:
+        best_fmt = max(fmts, key=lambda f: max((w * h for w, h in fmts[f]), default=0))
+        if req == "AUTO":
+            chosen = best_fmt
+            print(f"Auto-selected capture format: {chosen}")
+        elif req not in ("NONE",) and req not in fmts:
+            print(f"WARNING: camera does not support '{req}'. "
+                  f"Available: {', '.join(fmts)}. Falling back to '{best_fmt}'.")
+            chosen = best_fmt
+    elif req == "AUTO":
+        chosen = "NONE"                              # can't enumerate; let the driver decide
+    args.fourcc = chosen
+
+    # Auto-detect the camera's MAX resolution for the chosen format
     if args.max_res:
-        mx = detect_max_resolution(device_path, args.fourcc)
-        if mx:
-            args.width, args.height = mx
-            print(f"Max resolution for {args.fourcc.upper()} on {device_path}: {args.width}x{args.height}")
+        sizes = fmts.get(chosen, []) if fmts else []
+        if not sizes and fmts:                       # NONE/unknown -> overall max across formats
+            sizes = [wh for lst in fmts.values() for wh in lst]
+        if sizes:
+            args.width, args.height = max(sizes, key=lambda wh: wh[0] * wh[1])
+            print(f"Max resolution for {chosen}: {args.width}x{args.height}")
         else:
             print("WARNING: could not auto-detect max resolution (is v4l-utils installed?); "
-                  "falling back to --width/--height.")
+                  "using --width/--height.")
+
+    # Performance guard for very high resolutions
+    if args.width * args.height >= 3840 * 2160:
+        print("NOTE: 4K capture is very heavy for real-time blur/segmentation. Expect low FPS; "
+              "use --fps 15, --no-blur, or a smaller --out-width/--out-height if it stutters.")
 
     out_w = args.out_width or args.width
     out_h = args.out_height or args.height
@@ -360,6 +387,9 @@ def main():
     aw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     ah = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     afps = int(cap.get(cv2.CAP_PROP_FPS)) or args.fps
+    if (aw, ah) != (args.width, args.height):
+        print(f"WARNING: requested {args.width}x{args.height} but camera delivered {aw}x{ah} "
+              f"(the driver may have clamped it for this format/bandwidth).")
     print(f"Input {aw}x{ah}@{afps} | Output {out_w}x{out_h} -> {args.output}")
     print(f"Blur={'off' if args.no_blur else blur} | AutoFrame={'on' if args.auto_frame else 'off'}")
     print("Ctrl+C to stop.\n")
@@ -574,71 +604,60 @@ If this works but the script still errors, the FOURCC line isn't taking effect �
 
 ---
 
-## Using an Opal C1 (or other MJPG-less cameras)
+## Using an Opal C1 (and other non-MJPG cameras)
 
-The **Opal C1** exposes only **uncompressed (YUYV)** formats on Linux — it does **not** offer MJPG (its compression/AI features run through Opal's own macOS/Windows app). Forcing MJPG therefore fails with:
+Different webcams expose different pixel formats over UVC on Linux. The **Opal C1** does **not** offer MJPG at all — depending on firmware/kernel it exposes **NV12** (often up to 4K: `1280x720, 1920x1080, 2560x1440, 3840x2160`) or YUYV. Forcing MJPG on it fails with:
 
 ```
 cannot find proper format for codec mjpeg
 ```
 
-### Fix — select YUYV instead of MJPG
+### Step 1 — See what your camera actually supports
 
 ```bash
-python blur_cam.py --fourcc YUYV --width 1280 --height 720
-# with blur + auto-frame:
-python blur_cam.py --fourcc YUYV --auto-frame --width 1280 --height 720
+python blur_cam.py --list-formats -i 4     # use the Opal's capture node index
+# Example (Opal C1):
+#   Supported formats for /dev/video4:
+#     NV12: 1280x720, 1920x1080, 2560x1440, 3840x2160
 ```
 
-### Output the Opal C1 at its maximum resolution
+### Step 2 — Let the script pick a supported format automatically
 
-Instead of hard-coding a size, let the script query the camera and pick the largest
-resolution the chosen format supports:
+The script auto-falls back to a format the camera supports, so you don't have to hard-code it. Two easy options:
 
 ```bash
-# See exactly what the camera offers
-python blur_cam.py --list-formats
-# Example output:
-#   Supported formats for /dev/video0:
-#     YUYV: 640x480, 1280x720, 1920x1080
+# AUTO: pick the camera's best-supported format, and grab its MAX resolution
+python blur_cam.py -i 4 --fourcc auto --max-res --auto-frame
 
-# Auto-select the maximum resolution for YUYV and run
-python blur_cam.py --fourcc YUYV --max-res --auto-frame
+# Or name the format explicitly (from --list-formats) + max resolution
+python blur_cam.py -i 4 --fourcc NV12 --max-res --auto-frame
 ```
 
-`--max-res` uses `v4l2-ctl` (from `v4l-utils`) to enumerate supported sizes and picks the
-largest by pixel area. On Linux over plain UVC the Opal C1 typically tops out at **1920x1080
-(YUYV)** — higher modes require Opal's own macOS/Windows app. Note that max-res YUYV is very
-bandwidth-heavy; if you hit `not enough bandwidth for new device state`, drop the FPS
-(`--fps 24`) or step down a resolution.
+- If you pass the default `--fourcc MJPG` but the camera lacks MJPG, the script prints a
+warning and **automatically switches** to a supported format (e.g. NV12) instead of
+silently dropping to a low default resolution.
+- `--max-res` enumerates the supported sizes for the chosen format and picks the largest by
+pixel area. For the Opal C1 that is typically **3840x2160 (NV12)**.
 
-Or let the driver pick whatever it defaults to:
+### Step 3 — Mind the performance & bandwidth at 4K
 
+4K is **very** demanding for real-time segmentation + blur and for the USB bus:
+
+- Expect low FPS at 3840x2160 with blur on. The script prints a NOTE when you select 4K.
+- Keep the heavy ML output but lighten the pipeline by downscaling the **output**:
 ```bash
-python blur_cam.py --fourcc NONE
+# Capture at 4K, output a lighter 1080p (still uses the full-res sensor feed)
+python blur_cam.py -i 4 --fourcc NV12 --max-res --auto-frame --out-width 1920 --out-height 1080
 ```
+- If you hit `not enough bandwidth for new device state`, lower FPS (`--fps 15`) or step down
+a resolution, and plug the camera **directly** into a USB 3.0 / USB-C port (see the USB
+bandwidth section above).
+- If a resolution won't apply, the script warns `requested WxH but camera delivered ...` so
+you can see the driver clamped it.
 
-### First, confirm which formats the camera actually supports
-
-```bash
-v4l2-ctl -d /dev/video0 --list-formats-ext
-```
-
-- If you see **only** `YUYV` / `'YUYV' (YUYV 4:2:2)` and no `MJPG` block → use `--fourcc YUYV`.
-- If you see an `MJPG` block → `--fourcc MJPG` (the default) is fine.
-
-### Watch the bandwidth with YUYV
-
-YUYV is uncompressed, so it needs far more USB bandwidth than MJPG. If you hit
-`not enough bandwidth for new device state` with the Opal C1, **lower the resolution or FPS**:
-
-```bash
-python blur_cam.py --fourcc YUYV --width 1280 --height 720 --fps 30
-python blur_cam.py --fourcc YUYV --width 960  --height 540 --fps 30
-python blur_cam.py --fourcc YUYV --width 640  --height 480 --fps 30
-```
-
-and plug the camera **directly** into a USB 3.0 / USB-C port (see the USB bandwidth section above).
+> If `--list-formats` prints nothing, install `v4l-utils` (`sudo pacman -S v4l-utils`) — the
+> auto-detection and `--max-res` features rely on `v4l2-ctl`.
+> 
 
 ---
 
@@ -678,7 +697,7 @@ Then in Zoom/Meet/Teams pick **"Virtual_Blur_Cam"** as the camera.
 | `--output` | `-o` | `/dev/video10` | Virtual cam device |
 | `--width`/`--height` | `-W`/`-H` | `1280`/`720` | Capture resolution |
 | `--fps` | `-f` | `30` | Target FPS |
-| `--fourcc` |  | `MJPG` | Capture format: `MJPG` (Brio), `YUYV` (Opal C1), or `NONE` |
+| `--fourcc` |  | `MJPG` | Capture format: `MJPG` (Brio), `YUYV`/`NV12` (Opal C1), `AUTO`, or `NONE`. Auto-falls back if unsupported. |
 | `--max-res` |  | off | Auto-detect & use the camera's max resolution for `--fourcc` (needs v4l-utils) |
 | `--list-formats` |  | off | Print the camera's supported formats + resolutions, then exit |
 | `--seg-model` |  | `selfie_segmenter.tflite` | Segmenter model path |
