@@ -286,6 +286,21 @@ def print_formats(device_path):
         print(f"  {fcc}: " + ", ".join(f"{w}x{h}" for w, h in sizes))
 
 
+def normalize_bgr(frame, w, h):
+    """Guarantee a 3-channel BGR frame. Safety net for the case where OpenCV still returns
+    a raw NV12/YUYV buffer (single channel, or height = h*3/2) instead of a converted image."""
+    if frame is None or (frame.ndim == 3 and frame.shape[2] == 3):
+        return frame
+    if frame.ndim == 2:
+        if h and frame.shape[0] == (h * 3) // 2:            # raw NV12 (Y plane + interleaved UV)
+            return cv2.cvtColor(frame, cv2.COLOR_YUV2BGR_NV12)
+        if h and w and frame.size == h * w * 2:             # packed YUYV as (h, w*2)
+            return cv2.cvtColor(frame.reshape(h, w, 2), cv2.COLOR_YUV2BGR_YUYV)
+    if frame.ndim == 3 and frame.shape[2] == 2:             # YUYV as 2-channel
+        return cv2.cvtColor(frame, cv2.COLOR_YUV2BGR_YUYV)
+    return frame
+
+
 def main():
     args = parse_args()
     device_path = f"/dev/video{args.input}"
@@ -374,8 +389,13 @@ def main():
     #     forcing MJPG on those raises 'cannot find proper format for codec mjpeg'.
     #   NONE — let the driver pick its default format.
     fourcc = args.fourcc.upper()
-    if fourcc != "NONE":
-        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*fourcc))
+    # Only FORCE MJPG (compressed) — this is what cuts USB bandwidth for cams like the Brio.
+    # For UNCOMPRESSED formats (NV12, YUYV) do NOT force the FOURCC: doing so makes OpenCV
+    # return the raw YUV buffer, which looks greenish/distorted AND mis-scaled ("zoomed in").
+    # Instead, let OpenCV negotiate the format from the requested resolution and convert to BGR.
+    if fourcc == "MJPG":
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    cap.set(cv2.CAP_PROP_CONVERT_RGB, 1.0)   # ask OpenCV to deliver BGR, not raw YUV
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, args.width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args.height)
     cap.set(cv2.CAP_PROP_FPS, args.fps)
@@ -411,6 +431,7 @@ def main():
             ok, frame = cap.read()
             if not ok:
                 continue
+            frame = normalize_bgr(frame, aw, ah)
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
 
@@ -659,6 +680,9 @@ you can see the driver clamped it.
 > auto-detection and `--max-res` features rely on `v4l2-ctl`.
 > 
 
+> **Colors greenish or image mis-scaled/zoomed?** That's the raw-YUV pitfall: the script no longer forces the FOURCC for NV12/YUYV (only for MJPG) and calls `cv2.CAP_PROP_CONVERT_RGB` plus a `normalize_bgr()` safety net, so grab the latest `blur_cam.py`. If it still looks too tight, that's the `--auto-frame` crop — raise `--zoom` (e.g. `--zoom 0.9`) or run without `--auto-frame`.
+> 
+
 ---
 
 ## 5. Usage
@@ -762,6 +786,8 @@ journalctl -u webcam-blur.service -f
 | Preview window won't open | Install `opencv-python` (not `-headless`). |
 | `Killed` (SIGKILL) | OOM killer — see the "Fixing `Killed`" section: lower resolution, cap threads, add swap. |
 | `cannot find proper format for codec mjpeg` | Camera has no MJPG (e.g. Opal C1). Use `--fourcc YUYV` (or `NONE`). See the Opal C1 section. |
+| Greenish / distorted colors (NV12/YUYV cams) | Don't force the FOURCC on uncompressed cams — update to the latest script (only MJPG is forced; `CAP_PROP_CONVERT_RGB` + `normalize_bgr` handle the rest). |
+| Image looks overly "zoomed in" | Two causes: (a) raw-YUV mis-scaling — fixed by the color fix above; (b) `--auto-frame` crop — raise `--zoom` (e.g. `0.9`) or drop `--auto-frame`. |
 
 ---
 
