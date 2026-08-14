@@ -22,6 +22,14 @@ weight: 10
 
 ---
 
+> **⚠️ Honest bottom line — Opal C1 on Linux:** The Opal C1 reliably streams **only 720p (NV12)**
+> over raw Linux UVC. Requesting 1080p/1440p/4K distorts the image or makes the camera
+> **disconnect/reset**, because its high-resolution pipeline depends on Opal's own macOS/Windows
+> app. **On Linux, run everything at 1280x720.** If you need higher resolution, use a native
+> MJPG/H.264 webcam such as the **Logitech Brio**. See *"Opal C1 — every option that works"* and
+> *"Opal C1 keeps disconnecting"* below.
+> 
+
 ## 0. Fix for `AttributeError: module 'mediapipe' has no attribute 'solutions'`
 
 This happens because either (a) you're on Python 3.13 (no MediaPipe wheel -> broken install), or (b) your MediaPipe version dropped the legacy `solutions` API. The robust fix is to use **Python 3.12 + the Tasks API script below**.
@@ -172,6 +180,7 @@ import time
 import os
 import re
 import subprocess
+import glob
 
 
 def parse_args():
@@ -208,6 +217,11 @@ def parse_args():
     p.add_argument("--face-confidence", type=float, default=0.7, help="Min face confidence")
     # Misc
     p.add_argument("--preview", "-p", action="store_true", help="Show local preview window")
+    p.add_argument("--auto-detect", action="store_true",
+                   help="Auto-find the camera capture node by name (overrides --input). "
+                        "Robust against the /dev/videoN number changing between reboots.")
+    p.add_argument("--camera-name", type=str, default="opal",
+                   help="Model substring to match when --auto-detect is set (default: opal).")
     return p.parse_args()
 
 
@@ -375,8 +389,53 @@ def open_capture(args, device_path):
     return cap, aw, ah, afps
 
 
+def _udev_properties(node):
+    try:
+        out = subprocess.check_output(
+            ["udevadm", "info", "-q", "property", "--name", node],
+            stderr=subprocess.DEVNULL, text=True)
+    except Exception:
+        return {}
+    props = {}
+    for line in out.splitlines():
+        if "=" in line:
+            k, v = line.split("=", 1)
+            props[k] = v
+    return props
+
+
+def find_camera_node(name_substr="opal"):
+    """Return the /dev/videoN index of the first CAPTURE node whose model matches
+    name_substr (case-insensitive). None if not found. Uses udev so it survives the
+    /dev/videoN number changing between reboots/replugs."""
+    want = name_substr.lower()
+    nodes = sorted(glob.glob("/dev/video*"),
+                   key=lambda p: int(re.sub(r"\D", "", p) or "-1"))
+    for node in nodes:
+        props = _udev_properties(node)
+        name = " ".join([
+            props.get("ID_V4L_PRODUCT", ""),
+            props.get("ID_MODEL", ""),
+            props.get("ID_MODEL_ENC", ""),
+            props.get("ID_MODEL_FROM_DATABASE", ""),
+        ]).lower()
+        caps = props.get("ID_V4L_CAPABILITIES", "")
+        if want in name and ":capture:" in caps:
+            m = re.search(r"(\d+)$", node)
+            if m:
+                return int(m.group(1))
+    return None
+
+
 def main():
     args = parse_args()
+    if args.auto_detect:
+        idx = find_camera_node(args.camera_name)
+        if idx is not None:
+            args.input = idx
+            print(f"Auto-detected '{args.camera_name}' camera at /dev/video{idx}")
+        else:
+            print(f"WARNING: no '{args.camera_name}' camera found; using --input {args.input}.")
     device_path = f"/dev/video{args.input}"
 
     # Just list formats and exit
@@ -714,6 +773,105 @@ If this works but the script still errors, the FOURCC line isn't taking effect �
 
 ---
 
+## Opal C1 keeps disconnecting / OBS shows no video
+
+If the camera **disconnects and reconnects**, or apps like **OBS can't see any video**, the
+Opal C1's firmware has **reset** — usually triggered by repeatedly requesting a resolution it
+can't cleanly deliver over Linux UVC (1080p/1440p/4K). This is a **camera/driver-level** issue,
+not the blur script.
+
+### Recover the camera to a working state
+
+```bash
+# 1. Stop everything using the camera (blur script, OBS, browsers, Zoom, ffplay)
+fuser -v /dev/video*                 # see who holds it
+# if something is stuck:  sudo fuser -k /dev/video4
+
+# 2. Check the kernel log for reset/error messages
+sudo dmesg -T | tail -30             # look for 'reset', 'disconnect', 'usb', 'uvcvideo'
+
+# 3. Reload the UVC driver (after closing all camera apps)
+sudo modprobe -r uvcvideo && sudo modprobe uvcvideo
+
+# 4. If still bad: physically unplug the Opal, wait ~10s, replug into a USB 3.0/USB-C port
+#    (directly, no hub). Reboot as a last resort.
+```
+
+### Verify it works again at the known-good mode (720p)
+
+```bash
+ffplay -f v4l2 -input_format nv12 -video_size 1280x720 -framerate 30 /dev/video4
+```
+
+### The Linux reality for the Opal C1
+
+On Linux the Opal C1 reliably streams **only 720p (NV12)**; 1080p/1440p/4K tend to distort or
+reset the device because its high-res pipeline depends on Opal's own macOS/Windows app. For a
+stable Linux setup, run the blur tool at 720p:
+
+```bash
+python blur_cam.py -i 4 --fourcc auto --width 1280 --height 720 --fps 30 --auto-frame
+```
+
+If you need higher resolution on Linux, a **native MJPG/H.264 webcam** (e.g. Logitech Brio,
+which does MJPG at 1080p+) will behave far better than the Opal C1.
+
+---
+
+## Opal C1 — every option that works (720p on Linux)
+
+On Linux the Opal C1 is stable **only at 1280x720 / NV12**. Within that mode, all of the
+script's blur and auto-framing options work normally. Use `-i 4` (adjust to your capture node).
+
+### Recommended commands
+
+```bash
+# Auto-detect the Opal's node (no -i needed) + blur + auto-frame — best for a fixed setup
+python blur_cam.py --auto-detect --fourcc auto --width 1280 --height 720 --fps 30 --auto-frame
+
+# Blur + auto-frame with an explicit node
+python blur_cam.py -i 4 --fourcc auto --width 1280 --height 720 --fps 30 --auto-frame
+
+# Blur only (no crop, full 720p field of view)
+python blur_cam.py -i 4 --fourcc auto --width 1280 --height 720 --fps 30
+
+# Auto-frame only, no blur (lightest / highest FPS)
+python blur_cam.py -i 4 --fourcc auto --width 1280 --height 720 --no-blur --auto-frame
+
+# Stronger bokeh + wider auto-frame + local preview
+python blur_cam.py -i 4 --fourcc auto --width 1280 --height 720 --blur-strength 35 --zoom 0.9 --preview
+
+# If the person gets blurred instead of the background
+python blur_cam.py -i 4 --fourcc auto --width 1280 --height 720 --invert-mask
+```
+
+### Flags that are SAFE with the Opal C1
+
+| Flag | Notes |
+| --- | --- |
+| `--auto-detect` (`--camera-name opal`) | Finds the Opal's capture node automatically — best for the systemd service |
+| `-i/--input 4` | The Opal's capture node (verify with `--list-formats` / udev) |
+| `--fourcc auto` or `--fourcc NV12` | NV12 is the only format the Opal exposes on Linux |
+| `--width 1280 --height 720` | The only reliably-working resolution |
+| `--fps 30` | Works at 720p |
+| `--backend ffmpeg` (default) | Clean frames; `--backend opencv` also works at 720p |
+| `--auto-frame`, `--zoom`, `--smoothing`, `--face-confidence` | Face-tracking crop |
+| `--blur-strength`, `--edge-blur`, `--threshold`, `--invert-mask` | Background blur controls |
+| `--no-blur` | Disable blur (auto-frame only) |
+| `--out-width`, `--out-height` | Downscale the output (e.g. 960x540) — fine |
+| `--preview` | Local preview window |
+| `--list-formats` | Inspect the camera's formats |
+
+### Flags/values to AVOID with the Opal C1
+
+| Avoid | Why |
+| --- | --- |
+| `--max-res` | Selects 3840x2160 -> distorts / **resets the camera** |
+| `--width/--height` above 1280x720 | 1080p/1440p/4K distort or disconnect the device |
+| Upscaling output beyond 720p | No quality gain (source is capped at 720p) |
+
+---
+
 ## Using an Opal C1 (and other non-MJPG cameras)
 
 Different webcams expose different pixel formats over UVC on Linux. The **Opal C1** does **not** offer MJPG at all — depending on firmware/kernel it exposes **NV12** (often up to 4K: `1280x720, 1920x1080, 2560x1440, 3840x2160`) or YUYV. Forcing MJPG on it fails with:
@@ -817,6 +975,8 @@ Then in Zoom/Meet/Teams pick **"Virtual_Blur_Cam"** as the camera.
 | `--max-res` |  | off | Auto-detect & use the camera's max resolution for `--fourcc` (needs v4l-utils) |
 | `--list-formats` |  | off | Print the camera's supported formats + resolutions, then exit |
 | `--backend` |  | `ffmpeg` | Capture backend: `ffmpeg` (robust NV12/YUYV at all res) or `opencv` |
+| `--auto-detect` |  | off | Auto-find the camera's capture node by name (overrides `--input`) |
+| `--camera-name` |  | `opal` | Model substring to match when `--auto-detect` is set |
 | `--seg-model` |  | `selfie_segmenter.tflite` | Segmenter model path |
 | `--face-model` |  | `blaze_face_short_range.tflite` | Face model path |
 | `--blur-strength` | `-b` | `21` | Blur kernel (auto-forced odd) |
@@ -833,34 +993,70 @@ Then in Zoom/Meet/Teams pick **"Virtual_Blur_Cam"** as the camera.
 
 ---
 
-## 7. Systemd Service (optional)
+## 7. Run as a systemd service (auto-start + auto-detect)
 
-`/etc/systemd/system/webcam-blur.service`:
+Run the blur cam automatically in the background as a **user service**. With `--auto-detect`
+it finds the Opal C1's capture node on every start, so it keeps working even if the
+`/dev/videoN` number changes after a reboot or replug.
+
+**One-time prerequisites:**
+
+```bash
+sudo usermod -aG video "$USER"          # camera access (log out/in afterwards)
+v4l2-ctl --list-devices | grep -i virtual   # confirm v4l2loopback loads at boot (section 1)
+```
+
+Create `~/.config/systemd/user/webcam-blur.service`:
 
 ```ini
 [Unit]
-Description=Webcam Blur + Auto-Frame Virtual Camera
-After=multi-user.target
+Description=Webcam Background Blur + Auto-Frame (Opal C1, 720p)
+After=graphical-session.target
 
 [Service]
 Type=simple
-User=YOUR_USERNAME
-WorkingDirectory=/home/YOUR_USERNAME/webcam-blur
-ExecStart=/home/YOUR_USERNAME/webcam-blur/.venv/bin/python blur_cam.py --auto-frame --blur-strength 25 --zoom 0.7
+WorkingDirectory=%h/webcam-blur
+# Wait for the v4l2loopback virtual camera to appear before starting
+ExecStartPre=/bin/sh -c 'until [ -e /dev/video10 ]; do sleep 1; done'
+ExecStart=%h/webcam-blur/.venv/bin/python %h/webcam-blur/blur_cam.py \
+  --auto-detect --camera-name opal \
+  --fourcc auto --width 1280 --height 720 --fps 30 --auto-frame
 Restart=on-failure
 RestartSec=5
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 ```
+
+Enable, start, and inspect it:
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now webcam-blur.service
-journalctl -u webcam-blur.service -f
+mkdir -p ~/.config/systemd/user
+# (save the unit file above, then:)
+systemctl --user daemon-reload
+systemctl --user enable --now webcam-blur.service
+
+systemctl --user status webcam-blur.service
+journalctl --user -u webcam-blur.service -f
+
+# keep it running even when you're not logged in (headless):
+loginctl enable-linger "$USER"
 ```
 
----
+Manage it:
+
+```bash
+systemctl --user restart webcam-blur.service
+systemctl --user stop webcam-blur.service
+systemctl --user disable --now webcam-blur.service
+```
+
+> **System-wide alternative:** to run it as a root/system service, place the unit at
+> `/etc/systemd/system/webcam-blur.service`, add `User=YOUR_USERNAME`, set
+> `After=multi-user.target`, replace every `%h` with the absolute home path, and manage it with
+> `sudo systemctl ...` (no `--user`). The **user service above is recommended** on a laptop —
+> it inherits your `video`-group access and needs no root.
+> 
 
 ## 8. Troubleshooting
 
@@ -883,6 +1079,7 @@ journalctl -u webcam-blur.service -f
 | Image looks overly "zoomed in" | Two causes: (a) raw-YUV mis-scaling — fixed by the color fix above; (b) `--auto-frame` crop — raise `--zoom` (e.g. `0.9`) or drop `--auto-frame`. |
 | Only 720p is clean; higher res green/corrupt | USB 2.0 bandwidth ceiling — NV12 only fits at 720p on USB 2.0. Use a USB 3.0 port/cable, or `--fps 15` at 1080p. See the USB bandwidth section. |
 | Green/distorted at higher res **even on USB 3.0** | OpenCV mishandles NV12 stride. Use the default `--backend ffmpeg` (needs `ffmpeg` installed). |
+| Opal C1 disconnects/resets, OBS shows nothing | Camera firmware reset from an unsupported high-res mode. Recover (reload `uvcvideo`, replug) and stay at **720p** on Linux. See "Opal C1 keeps disconnecting". |
 
 ---
 
