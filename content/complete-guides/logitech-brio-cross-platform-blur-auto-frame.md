@@ -290,6 +290,9 @@ def open_capture(args, name=None):
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     if not cap.isOpened():
         return None, 0, 0, 0
+    cc = int(cap.get(cv2.CAP_PROP_FOURCC))
+    fourcc = "".join(chr((cc >> (8 * i)) & 0xFF) for i in range(4)).strip("\x00")
+    print(f"Negotiated pixel format: {fourcc or 'unknown'} (want MJPG for 1440p/4K)")
     aw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     ah = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     afps = int(cap.get(cv2.CAP_PROP_FPS)) or args.fps
@@ -428,7 +431,9 @@ def main():
                     mask = cv2.resize(mask, (W, H), interpolation=cv2.INTER_LINEAR)
                 mask = cv2.GaussianBlur(mask, (edge, edge), 0)
                 mask3 = np.dstack([mask] * 3)
-                out = (frame * mask3 + fast_blur(frame, blur) * (1.0 - mask3)).astype(np.uint8)
+                bg = fast_blur(frame, blur)
+                inv3 = np.float32(1.0) - mask3            # float32 (not float64) — halves 4K memory
+                out = (frame * mask3 + bg * inv3).astype(np.uint8)
             else:
                 out = frame
 
@@ -550,6 +555,51 @@ full-res sharp).
 
 ---
 
+## `zsh: killed` at high resolution (OOM)
+
+`zsh: killed` = **SIGKILL from the OOM killer**. On the Brio, 4K only streams over **MJPG**
+(YUYV caps at 1080p — exactly what you see in OBS), so 4K *capture* is fine; the problem is
+**processing** a 3840x2160 frame through blur + compositing, which allocates large per-frame
+arrays. (A `float64` promotion in the blend, now fixed to `float32`, was doubling that; grab the
+latest script.)
+
+### Confirm it's OOM and that MJPG is active
+
+```bash
+sudo dmesg -T | grep -iE 'oom|killed process|out of memory' | tail
+free -h
+# systemd-oomd on Arch can also kill on memory pressure:
+journalctl -u systemd-oomd -b --no-pager | tail
+```
+
+When the script starts it now prints `Negotiated pixel format: ...` — for 1440p/4K it **must** say
+**MJPG**. If it says `YUYV`, the camera won't give you 4K (bandwidth), so force MJPG (it's the
+default `--mjpg`) and make sure nothing downgraded it.
+
+### Fixes (in order)
+
+```bash
+# 1. Best for a virtual cam: process at 1080p (plenty for calls, far less memory/CPU)
+python blur_cam.py --auto-detect --res 1080p --fps 30 --auto-frame
+
+# 2. Want a 4K-quality source but lighter processing? capture 4K, output 1080p
+python blur_cam.py --auto-detect --res 4k --out-width 1920 --out-height 1080 --auto-frame
+
+# 3. Trim the segmentation cost regardless of capture size
+python blur_cam.py --auto-detect --res 1080p --proc-width 480 --auto-frame
+
+# 4. Auto-frame only (no blur) is the lightest mode
+python blur_cam.py --auto-detect --res 1080p --no-blur --auto-frame
+```
+
+> Note: `--out-width/--out-height` reduces the *output* size, but the blur/composite still run at
+> capture resolution, so **the biggest memory win is capturing lower (`--res 1080p`)**. Real-time
+> 4K blur is genuinely demanding; 1080p is the sweet spot for a blurred/auto-framed virtual camera.
+> If your machine is RAM-constrained, add swap or close browsers before running at 4K.
+> 
+
+---
+
 ## 6. Run at startup (per platform)
 
 **Linux — systemd user service** `~/.config/systemd/user/webcam-blur.service`:
@@ -590,6 +640,7 @@ run it as a service.) OBS Virtual Camera must be registered first.
 | Low FPS | Use 720p, keep `--preview` off, lower `--proc-width` (e.g. 480), or `--no-blur`. |
 | Green/frozen frames | Prefer `--backend opencv` with `--mjpg` (Brio supports MJPG); or try `--backend ffmpeg`. |
 | `mediapipe` won't install | Use Python 3.12 (no 3.13 wheels). |
+| `zsh: killed` at 1440p/4K | OOM killer — blur+composite at 4K is memory-heavy. Use `--res 1080p`, or capture 4K but composite lighter via `--out-width 1920 --out-height 1080`, and confirm `Negotiated pixel format: MJPG`. See "zsh: killed at high resolution". |
 | Windows ffmpeg backend error | Pass the exact `--device-name "Logitech BRIO"` (from `--list-devices`). |
 
 ---
