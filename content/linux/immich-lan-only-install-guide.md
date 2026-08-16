@@ -12,145 +12,357 @@ TocOpen: true
 weight: 10
 ---
 
-# Installing Immich on Linux — LAN-Only Guide
+# Immich on Debian 13 — Complete LAN-Only Self-Hosting Guide
 
-**Immich** is a self-hosted, high-performance photo and video backup solution — a private
-alternative to Google Photos with mobile apps, a web UI, facial recognition, object/scene
-detection, albums, and multi-user support. The **officially recommended** installation method
-is **Docker Compose**. Because this runs on your LAN only, you can skip HTTPS/reverse-proxy
-entirely and reach it directly by IP.
+A start-to-finish guide for running **Immich** (self-hosted photo & video backup, a private
+alternative to Google Photos) on a **Debian 13** host, **LAN-only** (no reverse proxy, no
+port-forwarding), with photos stored on a dedicated **SSD mounted at `/mnt/pics`**.
+
+Includes host prerequisites, Docker install, storage configuration, permissions, a
+**mount-guard** so Immich never writes to the wrong disk, security hardening, and backups.
 
 ---
 
-## Why Docker Compose?
+## 0. Overview & architecture
 
-Immich is made up of **several coordinated services** (server, machine-learning container,
-PostgreSQL with a vector extension, and Redis). Docker Compose wires these together with the
-correct versions and networking. The Immich team recommends against non-Docker installs
-because the ML and database components have specific version requirements that are painful to
-satisfy manually.
+Immich runs as **several coordinated Docker services**:
 
-> ⚠️ Immich evolves quickly — **read the release notes before updating**, and keep backups.
+| Service | Role |
+| --- | --- |
+| `immich-server` | Web/API server + the app you interact with |
+| `immich-machine-learning` | Facial recognition, smart search, object detection |
+| `database` | PostgreSQL with a vector extension (stores albums, metadata, faces, users) |
+| `redis` | Cache / job queue |
+
+Docker Compose is the **officially recommended and supported** method — the ML and database
+components have specific version requirements that are painful to satisfy manually.
+
+**This setup:**
+
+- Debian 13 host (a VM with a USB3 SSD passed through, ext4, mounted at `/mnt/pics`)
+- Photos + library stored on the SSD via `UPLOAD_LOCATION=/mnt/pics`
+- Reachable only on the LAN at `http://<server-ip>:2283`
+
+> ⚠️ Immich evolves quickly — **read the release notes before every update**, and keep backups.
 > 
 
 ---
 
-## Prerequisites
+## 1. Host prerequisites (Debian 13)
+
+### 1.1 System requirements
 
 | Requirement | Detail |
 | --- | --- |
-| **OS** | Any modern Linux (Ubuntu/Debian, Fedora, etc.) |
 | **RAM** | 4 GB minimum; **6 GB+ recommended** (ML is memory-hungry) |
-| **Storage** | Enough for your library + a bit for the database and thumbnails |
-| **Software** | Docker Engine + Docker Compose plugin |
+| **Storage** | Enough for your library + database + thumbnails/transcodes |
+| **Filesystem** | Photos disk **must be a native Linux FS** (ext4/xfs/btrfs). **Not** exFAT/NTFS — Immich + Postgres need real permissions and hardlinks |
 
-### Install Docker Engine + Compose
+### 1.2 Update the base system
 
 ```bash
-# Install Docker Engine + Compose plugin (official convenience script)
+sudo apt update && sudo apt upgrade -y
+```
+
+### 1.3 Confirm the SSD is mounted and on ext4
+
+```bash
+# Is it mounted?
+mountpoint /mnt/pics            # -> "/mnt/pics is a mountpoint"
+
+# What filesystem? (want ext4/xfs/btrfs, NOT exfat/ntfs/vfat)
+df -Th /mnt/pics
+lsblk -f
+```
+
+Make the mount persistent and boot-safe in `/etc/fstab` (use `nofail` so a missing SSD
+doesn't hang boot):
+
+```
+UUID=<your-uuid>  /mnt/pics  ext4  defaults,nofail,x-systemd.device-timeout=10  0  2
+```
+
+Test the fstab entry **before** rebooting:
+
+```bash
+sudo mount -a        # should mount cleanly with no errors
+```
+
+---
+
+## 2. Install Docker Engine + Compose
+
+```bash
+# Official convenience script (installs Engine + Compose V2 plugin)
 curl -fsSL https://get.docker.com | sudo sh
 
-# Let your user run docker without sudo (log out/in afterward)
+# Run docker without sudo (log out/in afterward to apply group change)
 sudo usermod -aG docker $USER
 
-# Verify
+# Verify — you want Compose V2 (`docker compose`, with a space)
 docker --version
 docker compose version
 ```
 
-Make sure you get the **Compose V2 plugin** (`docker compose`, with a space), not the old
-standalone `docker-compose`.
+Enable Docker on boot (so Immich comes back after a reboot):
+
+```bash
+sudo systemctl enable --now docker
+```
 
 ---
 
-## Step-by-Step Installation
-
-### Step 1 — Create a directory
+## 3. Download Immich
 
 ```bash
 mkdir -p ~/immich-app
 cd ~/immich-app
-```
 
-### Step 2 — Download the official compose and env files
-
-```bash
-# The docker-compose file
+# Official compose file
 wget -O docker-compose.yml https://github.com/immich-app/immich/releases/latest/download/docker-compose.yml
 
-# The environment template
+# Environment template
 wget -O .env https://github.com/immich-app/immich/releases/latest/download/example.env
 ```
 
-### Step 3 — Configure the `.env` file
+---
 
-```bash
-nano .env
+## 4. Configure storage on the SSD (`/mnt/pics`)
+
+### 4.1 How `UPLOAD_LOCATION` works
+
+Immich stores its **entire managed library** wherever `UPLOAD_LOCATION` points, creating and
+owning these subfolders:
+
+```
+/mnt/pics/
+├── library/          # your original photos/videos (the important stuff)
+├── upload/           # in-progress uploads
+├── thumbs/           # generated thumbnails
+├── encoded-video/    # transcoded videos
+├── profile/          # user profile images
+└── backups/          # internal DB dumps (if enabled)
 ```
 
-Key values to review:
-
-| Variable | What it does |
-| --- | --- |
-| `UPLOAD_LOCATION` | **Where your photos/videos are stored.** Point this at a large disk, e.g. `/mnt/photos/immich`. Most important setting. |
-| `DB_DATA_LOCATION` | Where the Postgres database files live (default `./postgres` is fine, but keep it on reliable storage). |
-| `DB_PASSWORD` | **Change this to a strong password** (even on LAN — good hygiene). |
-| `TZ` | Your timezone, e.g. `America/Los_Angeles`. |
-| `IMMICH_VERSION` | Leave as `release` to track latest, or pin a version (e.g. `v1.xxx.x`) for stability. |
-
-> 💡 Pinning `IMMICH_VERSION` to a specific tag gives you control over when you upgrade —
-> recommended for a stable home server.
+> ⚠️ This is Immich's **own managed structure** — don't dump an existing photo collection
+> directly into `/mnt/pics` expecting Immich to see it. That's what *External Libraries* are
+> for (a separate read-only mount). For a fresh, Immich-managed setup, just point it here and
+> upload via the app/web.
 > 
 
-### Step 4 — Start Immich
+### 4.2 Edit `.env`
 
 ```bash
+nano ~/immich-app/.env
+```
+
+| Variable | Set to | Notes |
+| --- | --- | --- |
+| `UPLOAD_LOCATION` | `/mnt/pics` | Photos + library live on the SSD |
+| `DB_DATA_LOCATION` | `/mnt/pics/database` *(optional)* | Keeps DB on the SSD too; or leave default `./postgres` |
+| `DB_PASSWORD` | a strong password | Good hygiene even on LAN |
+| `TZ` | `America/Los_Angeles` | Your timezone |
+| `PUID` / `PGID` | `1000` / `1000` | Run Immich as your user so files aren't root-owned (see 4.3) |
+| `IMMICH_VERSION` | `release` or a pinned tag | Pin (e.g. `v1.xxx.x`) for a stable home server |
+
+Find your UID/GID with:
+
+```bash
+id     # e.g. uid=1000(youruser) gid=1000(youruser)
+```
+
+### 4.3 Set folder ownership & permissions
+
+```bash
+# Make sure the SSD is mounted first!
+mountpoint /mnt/pics
+
+# Own it to your user (match PUID/PGID) and lock out other users
+sudo chown -R 1000:1000 /mnt/pics
+sudo chmod -R 750 /mnt/pics
+```
+
+**Permission summary:**
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| **Owner** | your UID:GID (e.g. `1000:1000`) matching `PUID/PGID` | Immich can read/write; files owned by you |
+| **Mode** | `750` (`rwxr-x---`) | Owner full, group read, **nothing for others** — private photos |
+| **Filesystem** | ext4 ✅ | POSIX perms + hardlinks required |
+
+> If you skip `PUID/PGID`, the server runs as **root** and writes `root:root` files. That works
+> too — files are just root-owned (annoying for backups/browsing). Either is valid.
+> 
+
+---
+
+## 5. Mount-guard — never write to the wrong disk
+
+**Problem:** if `/mnt/pics` ever fails to mount, Docker will happily create `/mnt/pics/library`
+on the VM's **root disk** and start writing there — silently filling root and splitting your
+library. Two layers of protection:
+
+### 5.1 Sentinel file (lives on the SSD)
+
+```bash
+# With the SSD mounted — this marker only exists when the disk is present:
+touch /mnt/pics/.immich-mounted
+```
+
+### 5.2 Add a mount-guard service to `docker-compose.yml`
+
+`depends_on` only orders services *within* compose — it can't check a host mount by itself. A
+tiny guard service that verifies the sentinel, combined with `depends_on`, gives you a real gate.
+
+Add this new service near the top of `services:`:
+
+```yaml
+  immich-mount-guard:
+    image: busybox:latest
+    container_name: immich_mount_guard
+    volumes:
+      - ${UPLOAD_LOCATION}:/mnt/check
+    command:
+      - sh
+      - -c
+      - >
+        test -f /mnt/check/.immich-mounted
+        && echo "Mount OK: /mnt/pics is present"
+        || (echo "FATAL: /mnt/pics not mounted (sentinel .immich-mounted missing) — refusing to start"; exit 1)
+    restart: "no"
+```
+
+### 5.3 Make `immich-server` depend on the guard
+
+Find `immich-server`'s `depends_on`. It's likely the short list form:
+
+```yaml
+    depends_on:
+      - redis
+      - database
+```
+
+Replace with the **long form** (required for conditions) and add the guard:
+
+```yaml
+    depends_on:
+      redis:
+        condition: service_started
+      database:
+        condition: service_healthy
+      immich-mount-guard:
+        condition: service_completed_successfully
+```
+
+`service_completed_successfully` = start Immich **only after** the guard exits 0. No SSD →
+guard exits 1 → Immich refuses to start.
+
+### 5.4 (Optional, strongest) Make the bare mountpoint immutable
+
+So nothing can write to `/mnt/pics` unless the SSD is mounted over it:
+
+```bash
+sudo umount /mnt/pics
+sudo chattr +i /mnt/pics     # block writes to the empty mountpoint
+sudo mount /mnt/pics         # SSD now mounts over it; writes go to the SSD
+```
+
+### 5.5 (Optional, most robust for boot) systemd dependency
+
+Because Debian creates a `mnt-pics.mount` unit, you can make Docker itself wait for it with a
+drop-in that adds `Requires=mnt-pics.mount` and `After=mnt-pics.mount` to the docker service —
+so the stack won't even attempt to start until the kernel confirms the mount.
+
+> **`depends_on` gates at startup only.** If the SSD drops *while running*, the guard won't
+> catch it — that's what 5.4's immutability trick protects against. Use them together.
+> 
+
+---
+
+## 6. Deploy
+
+```bash
+cd ~/immich-app
 docker compose up -d
 ```
 
-First run takes a few minutes (the ML model download can be large). Check health:
+First run downloads images + the ML model (a few minutes).
+
+---
+
+## 7. Verify
 
 ```bash
+# Guard passed?
+docker compose logs immich-mount-guard      # "Mount OK: /mnt/pics is present"
+
+# Everything up?
 docker compose ps
-docker compose logs -f    # Ctrl-C to stop following
+
+# Server logs
+docker compose logs -f immich-server         # Ctrl-C to stop
+
+# Immich created its folders on the SSD?
+ls -la /mnt/pics                              # library/ upload/ thumbs/ ...
 ```
 
-### Step 5 — Open the web UI and create your admin account
+**Test that the guard actually fires** (do this once):
 
-From any device on your LAN, browse to:
+```bash
+docker compose down
+sudo umount /mnt/pics
+docker compose up -d
+docker compose logs immich-mount-guard        # FATAL message
+docker compose ps                              # immich-server NOT running
+sudo mount /mnt/pics && docker compose up -d   # restore
+```
+
+---
+
+## 8. First login
+
+From any LAN device, browse to:
 
 ```
 http://<your-server-ip>:2283
 ```
 
-(e.g. `http://192.168.1.50:2283`). On first visit you'll create the **admin user**, then you
-can add more users and configure storage templates.
-
-**In the mobile app**, set the server URL to `http://<your-server-ip>:2283`.
+(e.g. `http://192.168.1.50:2283`). Create the **admin user**, then add users / storage
+templates. In the **mobile app**, set the server URL to the same address for auto-backup over
+Wi-Fi.
 
 ---
 
-## LAN-only network notes
+## 9. LAN-only networking
 
-Since you're keeping this on your local network:
-
-- **Give the server a static IP** (or a DHCP reservation on your router) so the address never
-changes and the mobile app keeps working after reboots.
-- **Firewall:** if `ufw` (or firewalld) is active, allow the port on your LAN subnet only:
+- **Static IP / DHCP reservation** on your router so the address never changes.
+- **Firewall scoped to your subnet** (Debian):
 ```bash
+sudo apt install -y ufw
 sudo ufw allow from 192.168.1.0/24 to any port 2283 proto tcp
+sudo ufw enable
 ```
-Adjust `192.168.1.0/24` to match your subnet. This keeps the port open on the LAN without
-ever exposing it beyond your network.
-- **Do not port-forward 2283** on your router — that's what keeps it LAN-only. If you later
-want to reach it from outside, the safe approach is a **VPN back into your LAN**
-(e.g. WireGuard or Tailscale) rather than exposing the port.
-- **Mobile auto-backup** works great over Wi-Fi at home. It just won't upload when you're away
-from your network — which is expected for a LAN-only setup.
+Adjust `192.168.1.0/24` to match your LAN.
+- **Do not port-forward 2283.** For remote access later, use a **VPN** (WireGuard/Tailscale)
+into your LAN — never an open port.
+- Auto-backup works on home Wi-Fi; it just won't upload when you're away (expected).
 
 ---
 
-## Updating Immich
+## 10. Security hardening (must-dos)
+
+- **Enable 2FA (TOTP)** on the admin account in Account Settings — the biggest account win.
+- **Strong, unique passwords** for admin and `DB_PASSWORD`.
+- **Separate admin from daily use** — create a normal user for browsing, reserve admin for admin.
+- **Disable public link sharing** if unused, or set expiry + passwords on links.
+- **Keep host + Immich patched:** `apt upgrade` regularly; `docker compose pull && up -d` for Immich.
+- **Harden the host:** SSH keys only (disable password SSH), consider `unattended-upgrades`.
+- **Encryption at rest:** consider LUKS on the SSD + any backup drives.
+- **Segment IoT/guest devices** onto a separate VLAN/network if your router supports it.
+
+---
+
+## 11. Updating Immich
 
 ```bash
 cd ~/immich-app
@@ -163,56 +375,67 @@ Check the release notes for breaking changes before each update.
 
 ---
 
-## Hardware acceleration (optional)
+## 12. Hardware acceleration (optional)
 
-Immich can offload work to your GPU:
-
-- **Transcoding** (video): via `hwaccel.transcoding.yml` — NVENC (NVIDIA), QuickSync (Intel), VAAPI, etc.
-- **Machine learning** (faces, smart search): via `hwaccel.ml.yml` — CUDA (NVIDIA), OpenVINO (Intel), ROCm (AMD).
-
-Download the relevant hwaccel YAML from the release, uncomment your platform's block, and start
-with both files:
+- **Transcoding:** `hwaccel.transcoding.yml` — NVENC (NVIDIA), QuickSync (Intel), VAAPI.
+- **Machine learning:** `hwaccel.ml.yml` — CUDA (NVIDIA), OpenVINO (Intel), ROCm (AMD).
 
 ```bash
 docker compose -f docker-compose.yml -f hwaccel.transcoding.yml up -d
 ```
 
-NVIDIA requires the `nvidia-container-toolkit` on the host.
+NVIDIA requires `nvidia-container-toolkit` on the host.
 
 ---
 
-## Backups — do not skip this
+## 13. Backups — do not skip
 
-Two things to back up separately:
+Back up **both**, and **test a restore** once:
 
-1. **Media files** — everything under `UPLOAD_LOCATION`. Back these up like any important data
-(rsync, Borg, restic, another disk).
-2. **The database** — contains albums, metadata, faces, users. Dump it regularly:
+1. **Media** — everything under `/mnt/pics` (rsync, Borg, restic, another disk; keep a 3-2-1 copy).
+2. **Database** — albums, metadata, faces, users:
 
 ```bash
-docker exec -t immich_postgres pg_dumpall --clean --if-exists -U postgres | gzip > immich-db-backup-$(date +%F).sql.gz
+docker exec -t immich_postgres pg_dumpall --clean --if-exists -U postgres \
+  | gzip > immich-db-backup-$(date +%F).sql.gz
 ```
 
-A media backup without the database means losing all albums and face data even if the files
-survive. Automate both with a cron job.
+Automate both with cron and verify the dump is non-empty (a silent backup failure is worse than
+none). RAID/snapshots are **not** a substitute for an offsite copy.
 
 ---
 
-## Quick summary
+## Quick-reference cheat sheet
 
 ```bash
-mkdir ~/immich-app && cd ~/immich-app
+# Host prep
+sudo apt update && sudo apt upgrade -y
+mountpoint /mnt/pics && df -Th /mnt/pics          # confirm ext4 + mounted
+
+# Docker
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER                     # re-login after
+sudo systemctl enable --now docker
+
+# Immich files
+mkdir -p ~/immich-app && cd ~/immich-app
 wget -O docker-compose.yml https://github.com/immich-app/immich/releases/latest/download/docker-compose.yml
 wget -O .env https://github.com/immich-app/immich/releases/latest/download/example.env
-# edit .env: set UPLOAD_LOCATION, DB_PASSWORD, TZ
+# edit .env: UPLOAD_LOCATION=/mnt/pics, DB_PASSWORD, TZ, PUID/PGID
+
+# Storage perms + sentinel
+sudo chown -R 1000:1000 /mnt/pics && sudo chmod -R 750 /mnt/pics
+touch /mnt/pics/.immich-mounted
+# add mount-guard service + depends_on (see section 5)
+
+# Deploy + verify
 docker compose up -d
-# visit http://<server-ip>:2283 and create your admin account
+docker compose logs immich-mount-guard
+docker compose ps
+# visit http://<server-ip>:2283
 ```
 
-Give the box a static IP, allow port 2283 on your LAN subnet, don't port-forward, and set up
-automated backups. That's a clean, private, LAN-only Immich.
-
-> Since Immich changes quickly, cross-check the exact `.env` variables against the official docs
-> at immich.app/docs/install/docker-compose before running — this describes the stable,
-> well-established flow, but variable names occasionally shift between releases.
+> Immich changes fast — cross-check exact `.env` variable names against the official docs at
+> immich.app/docs/install/docker-compose before running. This describes the stable,
+> well-established flow, but names occasionally shift between releases.
 >
