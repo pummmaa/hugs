@@ -438,4 +438,203 @@ docker compose ps
 > Immich changes fast — cross-check exact `.env` variable names against the official docs at
 > immich.app/docs/install/docker-compose before running. This describes the stable,
 > well-established flow, but names occasionally shift between releases.
->
+> 
+
+---
+
+## Appendix — Ready-to-Use Deployment Files
+
+The exact files for this setup, each in its own code block. Save them side by side in `~/immich-app/` using the filename shown as each block's heading.
+
+### One-time setup
+
+```bash
+# Prereqs (done once): Docker + SSD mounted at /mnt/pics (ext4, fstab with nofail)
+touch /mnt/pics/.immich-mounted                                  # mount sentinel
+sudo umount /mnt/pics && sudo chattr +i /mnt/pics && sudo mount /mnt/pics   # reboot-safe guard
+sudo chown -R 1000:1000 /mnt/pics && sudo chmod -R 750 /mnt/pics # ownership for PUID/PGID 1000
+
+cp .env.example .env        # create your private env file
+nano .env                   # set a strong DB_PASSWORD
+docker compose up -d        # launch
+```
+
+---
+
+### `docker-compose.yml`
+
+```yaml
+#
+# Immich — integrated for Debian 13, LAN-only, photos stored on the SSD at /mnt/pics.
+# Based on the official release compose (https://github.com/immich-app/immich).
+# This file contains NO secrets — all sensitive values are read from .env.
+#
+# ONE-TIME HOST PREP (cannot live inside Compose — do these once):
+#   1. Docker + Compose installed, SSD mounted at /mnt/pics (ext4, via /etc/fstab with `nofail`).
+#   2. Create the mount sentinel (only exists when the SSD is actually mounted):
+#          touch /mnt/pics/.immich-mounted
+#   3. (Recommended) Make the BARE mountpoint immutable so nothing writes to the wrong disk
+#      at reboot — even root is blocked when the SSD isn't mounted:
+#          sudo umount /mnt/pics && sudo chattr +i /mnt/pics && sudo mount /mnt/pics
+#   4. Immich runs as UID:GID 1000:1000 (see PUID/PGID in .env), so give it ownership of the SSD:
+#          sudo chown -R 1000:1000 /mnt/pics
+#          sudo chmod -R 750 /mnt/pics
+#      (The database subfolder is re-owned automatically by the Postgres container on startup.)
+#   5. Copy .env.example to .env and set a strong DB_PASSWORD.
+# Then just:  docker compose up -d
+#
+# NOTE ON PUID/PGID: the official Immich image does NOT read PUID/PGID by itself. They are applied
+#      here via `user: "${PUID}:${PGID}"` on the two Immich services so library files are owned by
+#      your user (1000:1000). Postgres and Redis keep their own default users.
+#
+# GPU: left on CPU. A Haswell iGPU cannot accelerate Immich ML (OpenVINO needs a modern/discrete
+#      Intel GPU), and enabling VAAPI transcoding needs /dev/dri (absent in most VMs) which would
+#      break startup. See the commented hwaccel blocks if you ever move to capable hardware.
+
+name: immich
+
+services:
+  # --- Mount guard -----------------------------------------------------------
+  # Verifies the SSD is really mounted (sentinel present) BEFORE Immich/Postgres start.
+  # NOTE: depends_on conditions apply to `docker compose up`. For reboot-time protection rely on
+  #       the `chattr +i` step above (blocks writes to the bare mountpoint even for root).
+  immich-mount-guard:
+    container_name: immich_mount_guard
+    image: docker.io/library/busybox:latest
+    volumes:
+      - ${UPLOAD_LOCATION}:/mnt/check
+    command:
+      - sh
+      - -c
+      - >
+        if [ -f /mnt/check/.immich-mounted ]; then
+          echo "Mount OK: SSD present at UPLOAD_LOCATION";
+        else
+          echo "FATAL: UPLOAD_LOCATION not mounted (.immich-mounted missing) - refusing to start";
+          exit 1;
+        fi
+    restart: "no"
+
+  immich-server:
+    container_name: immich_server
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    # Run as your user so library files are owned by 1000:1000 (from PUID/PGID in .env).
+    user: "${PUID}:${PGID}"
+    # extends:
+    #   file: hwaccel.transcoding.yml
+    #   service: cpu # [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] — needs /dev/dri; leave on CPU for Haswell/VM
+    volumes:
+      # Do not edit the next line. Change the media location via UPLOAD_LOCATION in .env
+      - ${UPLOAD_LOCATION}:/data
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env
+    ports:
+      - '2283:2283'
+    depends_on:
+      redis:
+        condition: service_started
+      database:
+        condition: service_healthy
+      immich-mount-guard:
+        condition: service_completed_successfully
+    restart: always
+    healthcheck:
+      disable: false
+
+  immich-machine-learning:
+    container_name: immich_machine_learning
+    # Haswell iGPU cannot accelerate ML — keep the plain (CPU) image tag below.
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+    user: "${PUID}:${PGID}"
+    # extends: # hardware acceleration — not usable on Haswell; see docs.immich.app/features/ml-hardware-acceleration
+    #   file: hwaccel.ml.yml
+    #   service: cpu
+    volumes:
+      - model-cache:/cache
+    env_file:
+      - .env
+    restart: always
+    healthcheck:
+      disable: false
+
+  redis:
+    container_name: immich_redis
+    image: docker.io/valkey/valkey:9@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
+    healthcheck:
+      test: redis-cli ping || exit 1
+    restart: always
+
+  database:
+    container_name: immich_postgres
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_DB: ${DB_DATABASE_NAME}
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+      # DB lives on the SSD (see DB_DATA_LOCATION in .env) — SSD, so leave DB_STORAGE_TYPE unset.
+      # DB_STORAGE_TYPE: 'HDD'
+    volumes:
+      # Do not edit the next line. Change the DB location via DB_DATA_LOCATION in .env
+      - ${DB_DATA_LOCATION}:/var/lib/postgresql/data
+    shm_size: 128mb
+    # Wait for the SSD mount before Postgres initializes its data dir on it.
+    depends_on:
+      immich-mount-guard:
+        condition: service_completed_successfully
+    restart: always
+    healthcheck:
+      disable: false
+
+volumes:
+  model-cache:
+```
+
+---
+
+### `.env.example`
+
+Copy this to `.env` and set `DB_PASSWORD`. Keep the real `.env` private (never commit it).
+
+```ini
+# Immich .env (SANITIZED / shareable template)
+# ------------------------------------------------------------------
+# SECURITY: The real .env holds your DB password. Do NOT commit or share it.
+#   - Add a .gitignore with a line:  .env
+#   - Keep this template as .env.example; copy it to .env and fill in the password.
+# ------------------------------------------------------------------
+
+# The location where your uploaded files / library are stored (the SSD).
+UPLOAD_LOCATION=/mnt/pics
+
+# The database data directory — kept on the SSD in its own subfolder.
+DB_DATA_LOCATION=/mnt/pics/database
+
+# Your timezone.
+TZ=America/Los_Angeles
+
+# Run the Immich containers as this user/group so files are owned by you (not root).
+PUID=1000
+PGID=1000
+
+# Immich version — 'release' tracks latest; pin (e.g. v1.140.0) for a stable home server.
+IMMICH_VERSION=release
+
+# --- Database credentials ---
+# Set a strong password here in your REAL .env before first launch. Left blank in this template.
+DB_PASSWORD=
+DB_USERNAME=postgres
+DB_DATABASE_NAME=immich
+```
+
+---
+
+### `.gitignore`
+
+Ensures your real `.env` (with the password) is never committed to version control.
+
+```gitignore
+# Keep secrets out of version control
+.env
+```
