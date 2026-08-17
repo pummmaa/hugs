@@ -1287,3 +1287,29 @@ font-increase=Control+plus Control+equal
 font-decrease=Control+minus
 font-reset=Control+0
 ```
+
+```bash
+❯ niri validate -c ~/.config/niri/config.kdl
+Error:   × error loading config
+  ├─▶ error parsing
+  ╰─▶ error parsing KDL
+
+Error:   × identifiers cannot be used as arguments
+    ╭─[config.kdl:42:1]
+ 42 │     position x=0 y=0
+ 43 │     variable-refresh-rate on-demand
+    ·                           ────┬────
+    ·                               ╰── unexpected identifier
+ 44 │ }
+    ╰────
+  help: consider enclosing in double quotes ".."
+Error:   × found `\n`, expected `"`, `/`, `\`, `b`, `f`, `n`, `r`, `t` or `u`
+     ╭─[config.kdl:129:1]
+ 129 │ // both instead of hardcoding one.
+ 130 │ spawn-at-startup "/bin/sh" "-c" "\
+     ·                                   ┬
+     ·                                   ╰── invalid escape char
+ 131 │     for p in /usr/libexec/polkit-gnome-authentication-agent-1 \
+ 132 │              /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1 \
+     ╰────
+```
