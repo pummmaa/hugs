@@ -12,155 +12,45 @@ TocOpen: true
 weight: 10
 ---
 
-# niri desktop configuration
+# niri desktop — Gruvbox Dark Hard
 
-A complete niri setup: scrollable-tiling Wayland compositor, waybar status bar,
-mako notifications, fuzzel launcher, foot terminal, swaylock/swayidle idle
-handling with dim-before-lock. Tokyo Night throughout.
+Scrollable-tiling Wayland compositor with waybar, mako, fuzzel, foot, and a
+swayidle chain that dims the backlight before locking. Tuned for 1920x1080 at
+scale 1.0.
 
-All paths below are relative to `~/.config/`.
+Paths are relative to `~/.config/`. The three shell scripts
+(`niri/scripts/idle-brightness.sh`, `waybar/scripts/mako-status.sh`,
+`waybar/scripts/powermenu.sh`) are not included here — they contain no colors
+and are unchanged.
+
+## Palette
+
+| Role | Hex |
+|---|---|
+| background | `#1d2021` |
+| background alt | `#3c3836` / `#504945` |
+| foreground | `#ebdbb2` |
+| muted | `#928374` |
+| accent | `#fe8019` (orange) |
+| secondary | `#fabd2f` (yellow) |
+| red / green / blue / aqua / purple | `#fb4934` / `#b8bb26` / `#83a598` / `#8ec07c` / `#d3869b` |
 
 ## Contents
 
-| File | Purpose | Mode |
-|---|---|---|
-| `niri/config.kdl` | compositor: input, outputs, layout, startup, keybinds | `644` |
-| `niri/scripts/idle-brightness.sh` | fade the backlight down before locking, restore on activity | `755` |
-| `waybar/config.jsonc` | status bar modules | `644` |
-| `waybar/style.css` | status bar theme | `644` |
-| `waybar/scripts/mako-status.sh` | bar module: notification count + DND state | `755` |
-| `waybar/scripts/powermenu.sh` | bar module: power menu via fuzzel | `755` |
-| `mako/config` | notification daemon | `644` |
-| `fuzzel/fuzzel.ini` | application launcher | `644` |
-| `swaylock/config` | screen locker | `644` |
-| `foot/foot.ini` | terminal emulator | `644` |
-
-## Install
-
-Create the files below, then:
-
-```bash
-chmod +x ~/.config/niri/scripts/idle-brightness.sh \
-         ~/.config/waybar/scripts/*.sh
-niri validate -c ~/.config/niri/config.kdl
-```
-
-### Packages — Arch
-
-```bash
-sudo pacman -S --needed \
-  niri waybar mako fuzzel foot swaybg swayidle swaylock \
-  xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-gnome \
-  wl-clipboard cliphist grim slurp \
-  brightnessctl playerctl \
-  pipewire pipewire-pulse pipewire-alsa wireplumber \
-  networkmanager network-manager-applet \
-  bluez bluez-utils blueman pavucontrol \
-  polkit polkit-gnome \
-  xwayland-satellite \
-  ttf-jetbrains-mono-nerd noto-fonts noto-fonts-emoji \
-  adwaita-icon-theme adwaita-cursors \
-  qt5-wayland qt6-wayland \
-  firefox yazi btop
-
-sudo systemctl enable --now NetworkManager bluetooth
-```
-
-Everything is in `core`/`extra` — no AUR required.
-
-**One caveat.** The `screenshots`, `effect-blur`, `effect-vignette` and `fade-in`
-lines in `swaylock/config` are `swaylock-effects` extensions. Vanilla swaylock
-rejects unknown options rather than ignoring them, so either delete those four
-lines or install the fork (`paru -S swaylock-effects`, which replaces
-`swaylock`). Test the locker before relying on it.
-
-### Packages — Debian / Ubuntu
-
-```bash
-sudo apt install waybar mako-notifier fuzzel foot swaybg swayidle swaylock \
-  xdg-desktop-portal-gtk xdg-desktop-portal-wlr wl-clipboard grim slurp \
-  brightnessctl playerctl wireplumber pipewire pipewire-pulse pipewire-alsa \
-  libspa-0.2-bluetooth network-manager network-manager-gnome policykit-1-gnome \
-  pavucontrol blueman fonts-jetbrains-mono fonts-noto-color-emoji \
-  adwaita-icon-theme firefox-esr btop
-```
-
-`niri`, `xwayland-satellite`, `cliphist` and `yazi` are not in Debian stable —
-take them from trixie/sid, or:
-
-```bash
-go install go.senan.xyz/cliphist@latest
-cargo install --locked yazi-fm yazi-cli
-```
-
-Without `cliphist`, `Mod+Y` does nothing. Without `xwayland-satellite`, X11-only
-apps will not start — drop that `spawn-at-startup` line and the `DISPLAY`
-variable if you skip it.
-
-Debian's `fonts-jetbrains-mono` is the unpatched font, so bar icons render as
-boxes. For the patched build:
-
-```bash
-mkdir -p ~/.local/share/fonts && cd ~/.local/share/fonts
-curl -fLO https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
-unzip -o JetBrainsMono.zip && rm JetBrainsMono.zip && fc-cache -f
-```
-
-The configs already handle both distros: the polkit spawn line probes the Debian
-and Arch agent paths, and `Mod+B` probes for `firefox` before `firefox-esr`.
-
-## Before first login
-
-- **Set your outputs.** The config ships placeholder connectors. Run
-  `niri msg outputs` inside a session and edit the `output` blocks to match.
-- **Wallpaper.** swaybg looks for `~/.config/niri/wallpaper.jpg`. Drop any JPEG
-  there or edit that spawn line.
-- **Secret Service.** Not included. Add `gnome-keyring` if you want
-  NetworkManager to store Wi-Fi passwords per-user, or ssh-agent integration.
-
-## Keybinds
-
-`Mod` is Super. Press `Mod+Shift+/` in the session for the full generated list.
-
-| Bind | Action |
+| File | Purpose |
 |---|---|
-| `Mod+Return` | terminal |
-| `Mod+D` | launcher |
-| `Mod+E` | file manager |
-| `Mod+B` | browser |
-| `Mod+Q` | close window |
-| `Mod+Escape` | lock |
-| `Mod+O` | overview |
-| `Mod+Y` | clipboard history |
-| `Mod+H/J/K/L` | focus left/down/up/right |
-| `Mod+Ctrl+<dir>` | move window |
-| `Mod+1`..`9` | workspace |
-| `Mod+R` / `Mod+F` | cycle width / maximize |
-| `Mod+W` / `Mod+V` | tabbed / floating |
-| `Mod+,` / `Mod+.` | consume / expel window |
-| `Print` | screenshot |
-| `Mod+Shift+E` | quit niri |
-
-## Idle behaviour
-
-Driven by the swayidle line in `config.kdl`:
-
-| Time | Action |
-|---|---|
-| 4:30 | dim the backlight |
-| 5:00 | lock |
-| 10:00 | power off monitors |
-| 30:00 | suspend |
-
-The dim lands 30s before the lock so the fade is a warning you can cancel by
-moving the mouse. Adjust the `timeout` values to taste.
-
----
+| `niri/config.kdl` | compositor: input, outputs, layout, startup, keybinds |
+| `waybar/config.jsonc` | status bar modules |
+| `waybar/style.css` | status bar theme, scales from font-size |
+| `mako/config` | notification daemon |
+| `fuzzel/fuzzel.ini` | application launcher |
+| `swaylock/config` | screen locker |
+| `foot/foot.ini` | terminal emulator |
 
 ## `niri/config.kdl`
 
 ```kdl
-// niri configuration
+// niri configuration -- Gruvbox Dark Hard
 // Docs: https://yalter.github.io/niri/
 // Validate after editing:  niri validate -c ~/.config/niri/config.kdl
 
@@ -202,7 +92,7 @@ output "eDP-1" {
     scale 1.0
     transform "normal"
     position x=0 y=0
-    variable-refresh-rate on-demand
+    variable-refresh-rate "on-demand"
 }
 
 output "HDMI-A-1" {
@@ -212,7 +102,7 @@ output "HDMI-A-1" {
 }
 
 layout {
-    gaps 12
+    gaps 10
     center-focused-column "never"
 
     preset-column-widths {
@@ -231,15 +121,16 @@ layout {
 
     focus-ring {
         width 2
-        active-gradient from="#7aa2f7" to="#bb9af7" angle=45
-        inactive-color "#3b4261"
+        // Gruvbox bright orange into bright yellow.
+        active-gradient from="#fe8019" to="#fabd2f" angle=45
+        inactive-color "#3c3836"
     }
 
     border {
         off
         width 2
-        active-color "#7aa2f7"
-        inactive-color "#3b4261"
+        active-color "#fe8019"
+        inactive-color "#3c3836"
     }
 
     shadow {
@@ -255,12 +146,12 @@ layout {
         gap 4
         length total-proportion=1.0
         position "left"
-        active-color "#7aa2f7"
-        inactive-color "#3b4261"
+        active-color "#fabd2f"
+        inactive-color "#504945"
     }
 
     insert-hint {
-        color "#7aa2f780"
+        color "#fe801980"
     }
 
     // Waybar reserves its own space via layer-shell exclusive zone, so no
@@ -275,7 +166,7 @@ layout {
 
 overview {
     zoom 0.5
-    backdrop-color "#1a1b26"
+    backdrop-color "#1d2021"
 }
 
 // --- Startup -----------------------------------------------------------
@@ -286,15 +177,11 @@ spawn-at-startup "mako"
 // Graphical password prompts for anything needing root (GUI package managers,
 // disk mounting). Without it those apps fail silently.
 //
-// The agent's path differs per distro -- Debian ships it under
-// /usr/lib/policykit-1-gnome, Arch under /usr/lib/polkit-gnome -- so probe
-// both instead of hardcoding one.
-spawn-at-startup "/bin/sh" "-c" "\
-    for p in /usr/libexec/polkit-gnome-authentication-agent-1 \
-             /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1 \
-             /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1; do \
-        [ -x \"$p\" ] && exec \"$p\"; \
-    done; exit 0"
+// The agent's path differs per distro -- Arch ships it under
+// /usr/lib/polkit-gnome, Debian under /usr/lib/policykit-1-gnome -- so probe
+// all of them instead of hardcoding one. KDL strings cannot span lines, hence
+// the long single line.
+spawn-at-startup "/bin/sh" "-c" "for p in /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 /usr/libexec/polkit-gnome-authentication-agent-1 /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1; do [ -x \"$p\" ] && exec \"$p\"; done; exit 0"
 spawn-at-startup "nm-applet" "--indicator"
 
 // Clipboard history, queried by Mod+Y below.
@@ -302,7 +189,7 @@ spawn-at-startup "/bin/sh" "-c" "wl-paste --watch cliphist store"
 
 // Wrapped in sh because spawn-at-startup passes arguments literally -- a bare
 // "~" would reach swaybg unexpanded and fail to open the file.
-spawn-at-startup "/bin/sh" "-c" "swaybg -m fill -i \"$HOME/.config/niri/wallpaper.jpg\""
+spawn-at-startup "/bin/sh" "-c" "swaybg -m fill -i \"$HOME/.config/niri/wallpaper.jpg\" -c '#1d2021'"
 
 // Idle chain. Ordered by timeout, and the dim step lands 30s before the lock
 // so the fade acts as a visible warning you can cancel by moving the mouse.
@@ -315,19 +202,9 @@ spawn-at-startup "/bin/sh" "-c" "swaybg -m fill -i \"$HOME/.config/niri/wallpape
 // The dim's `resume` must undim on any activity, including activity that
 // arrives after the lock, or the screen would stay dark behind the locker.
 //
-// Wrapped in sh because spawn-at-startup passes arguments literally, so
-// "$HOME" would reach swayidle as an unexpanded string.
-spawn-at-startup "/bin/sh" "-c" "exec swayidle -w \
-    timeout 270 '$HOME/.config/niri/scripts/idle-brightness.sh dim' \
-      resume '$HOME/.config/niri/scripts/idle-brightness.sh restore' \
-    timeout 300 'swaylock -f' \
-    timeout 600 'niri msg action power-off-monitors' \
-      resume 'niri msg action power-on-monitors' \
-    timeout 1800 'systemctl suspend' \
-    before-sleep 'swaylock -f' \
-    after-resume '$HOME/.config/niri/scripts/idle-brightness.sh restore' \
-    lock 'swaylock -f' \
-    unlock '$HOME/.config/niri/scripts/idle-brightness.sh restore'"
+// Wrapped in sh so "$HOME" expands -- spawn-at-startup passes args literally.
+// One line because KDL strings cannot be continued with a backslash.
+spawn-at-startup "/bin/sh" "-c" "exec swayidle -w timeout 270 '$HOME/.config/niri/scripts/idle-brightness.sh dim' resume '$HOME/.config/niri/scripts/idle-brightness.sh restore' timeout 300 'swaylock -f' timeout 600 'niri msg action power-off-monitors' resume 'niri msg action power-on-monitors' timeout 1800 'systemctl suspend' before-sleep 'swaylock -f' after-resume '$HOME/.config/niri/scripts/idle-brightness.sh restore' lock 'swaylock -f' unlock '$HOME/.config/niri/scripts/idle-brightness.sh restore'"
 
 // X11 apps. Requires the `xwayland-satellite` package; drop this line and the
 // DISPLAY variable below if you only run Wayland-native software.
@@ -414,7 +291,7 @@ binds {
     Mod+Return hotkey-overlay-title="Terminal" { spawn "foot"; }
     Mod+D hotkey-overlay-title="Run an Application" { spawn "fuzzel"; }
     Mod+E hotkey-overlay-title="File Manager" { spawn "foot" "-e" "yazi"; }
-    // Debian names the binary firefox-esr; upstream builds use firefox.
+    // Debian names the binary firefox-esr; Arch and upstream use firefox.
     Mod+B hotkey-overlay-title="Web Browser" { spawn "/bin/sh" "-c" "command -v firefox >/dev/null && exec firefox || exec firefox-esr"; }
     // Not Mod+L: that is vim-style focus-column-right below.
     Mod+Escape hotkey-overlay-title="Lock the Screen" { spawn "swaylock" "-f"; }
@@ -548,7 +425,665 @@ binds {
 }
 ```
 
-## `niri/scripts/idle-brightness.sh`  — `chmod +x`
+## `waybar/config.jsonc`
+
+```jsonc
+{
+  "layer": "top",
+  "position": "top",
+
+  // No fixed "height": the bar sizes itself from the CSS font-size and
+  // padding, so bumping font-size in style.css scales the whole bar instead
+  // of clipping tall glyphs against a hardcoded pixel height.
+  "spacing": 4,
+  "margin-top": 4,
+  "margin-left": 8,
+  "margin-right": 8,
+
+  "modules-left": ["niri/workspaces", "niri/window"],
+  "modules-center": ["clock"],
+  "modules-right": [
+    "tray",
+    "privacy",
+    "idle_inhibitor",
+    "pulseaudio",
+    "backlight",
+    "network",
+    "bluetooth",
+    "cpu",
+    "memory",
+    "temperature",
+    "battery",
+    "custom/notification",
+    "custom/power"
+  ],
+
+  "niri/workspaces": {
+    "format": "{icon}",
+    "format-icons": {
+      "active": "",
+      "default": "",
+      "empty": ""
+    },
+    "on-click": "activate"
+  },
+
+  "niri/window": {
+    "format": "{}",
+    // 1920px minus the center clock and 13 right-hand modules leaves roughly
+    // this much room before the title starts pushing the clock off-center.
+    "max-length": 42,
+    "separate-outputs": true,
+    "rewrite": {
+      "(.*) — Mozilla Firefox": " $1",
+      "(.*) - foot": " $1",
+      "": "—"
+    }
+  },
+
+  "clock": {
+    "interval": 1,
+    "format": "{:%a %d %b  %H:%M}",
+    "format-alt": "{:%Y-%m-%d %H:%M:%S}",
+    "tooltip-format": "<tt><small>{calendar}</small></tt>",
+    "calendar": {
+      "mode": "month",
+      "weeks-pos": "right",
+      "on-scroll": 1,
+      "format": {
+        "months": "<span color='#ebdbb2'><b>{}</b></span>",
+        "days": "<span color='#d5c4a1'>{}</span>",
+        "weeks": "<span color='#8ec07c'><b>W{}</b></span>",
+        "weekdays": "<span color='#fabd2f'><b>{}</b></span>",
+        "today": "<span color='#fb4934'><b><u>{}</u></b></span>"
+      }
+    },
+    "actions": {
+      "on-click-right": "mode",
+      "on-scroll-up": "shift_up",
+      "on-scroll-down": "shift_down"
+    }
+  },
+
+  "tray": {
+    "icon-size": 15,
+    "spacing": 6
+  },
+
+  "privacy": {
+    "icon-size": 13,
+    "transition-duration": 250,
+    "modules": [
+      { "type": "screenshare", "tooltip": true },
+      { "type": "audio-in", "tooltip": true }
+    ]
+  },
+
+  "idle_inhibitor": {
+    "format": "{icon}",
+    "format-icons": { "activated": "", "deactivated": "" },
+    "tooltip-format-activated": "Idle inhibited — screen stays awake",
+    "tooltip-format-deactivated": "Idle inhibitor off"
+  },
+
+  "pulseaudio": {
+    "format": "{icon} {volume}%",
+    "format-muted": "",
+    "format-bluetooth": "{icon} {volume}%",
+    "format-bluetooth-muted": "",
+    "format-icons": {
+      "headphone": "",
+      "hands-free": "",
+      "headset": "",
+      "phone": "",
+      "portable": "",
+      "car": "",
+      "default": ["", "", ""]
+    },
+    "scroll-step": 5,
+    "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+    "on-click-right": "pavucontrol",
+    "tooltip-format": "{desc} — {volume}%"
+  },
+
+  "backlight": {
+    "format": "{icon} {percent}%",
+    "format-icons": ["", "", "", "", "", "", "", "", ""],
+    "on-scroll-up": "brightnessctl --class=backlight set +5%",
+    "on-scroll-down": "brightnessctl --class=backlight set 5%-",
+    "tooltip": false
+  },
+
+  "network": {
+    // Icon only on the bar; the percentage and SSID live in the tooltip. At
+    // 1080p the right-hand group is the width bottleneck.
+    "format-wifi": "",
+    "format-ethernet": "",
+    "format-linked": "",
+    "format-disconnected": "",
+    "tooltip-format-wifi": "{essid} ({signalStrength}%)\n{ipaddr}/{cidr}\n {bandwidthUpBits}  {bandwidthDownBits}",
+    "tooltip-format-ethernet": "{ifname}\n{ipaddr}/{cidr}\n {bandwidthUpBits}  {bandwidthDownBits}",
+    "tooltip-format-disconnected": "Disconnected",
+    "on-click": "foot -e nmtui"
+  },
+
+  "bluetooth": {
+    "format": "",
+    "format-disabled": "",
+    "format-connected": " {num_connections}",
+    "tooltip-format": "{controller_alias}\t{controller_address}",
+    "tooltip-format-connected": "{controller_alias}\n{device_enumerate}",
+    "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
+    "on-click": "blueman-manager"
+  },
+
+  "cpu": {
+    "interval": 3,
+    "format": " {usage}%",
+    "on-click": "foot -e btop"
+  },
+
+  "memory": {
+    "interval": 5,
+    "format": " {percentage}%",
+    "tooltip-format": "{used:0.1f}G / {total:0.1f}G  (swap {swapUsed:0.1f}G)",
+    "on-click": "foot -e btop"
+  },
+
+  "temperature": {
+    "interval": 5,
+    "critical-threshold": 82,
+    "format": "{icon}",
+    "format-critical": " {temperatureC}°C",
+    "format-icons": ["", "", ""],
+    "tooltip-format": "{temperatureC}°C"
+  },
+
+  "battery": {
+    "interval": 10,
+    "states": { "warning": 25, "critical": 12 },
+    "format": "{icon} {capacity}%",
+    "format-charging": " {capacity}%",
+    "format-plugged": " {capacity}%",
+    "format-full": " {capacity}%",
+    "format-icons": ["", "", "", "", ""],
+    "tooltip-format": "{timeTo} ({power:0.1f} W)"
+  },
+
+  "custom/notification": {
+    "tooltip": true,
+    "format": "{}",
+    "exec": "~/.config/waybar/scripts/mako-status.sh",
+    "return-type": "json",
+    "interval": 3,
+    "on-click": "makoctl dismiss --all",
+    "on-click-right": "makoctl mode -t do-not-disturb"
+  },
+
+  "custom/power": {
+    "format": "",
+    "tooltip-format": "Power menu",
+    "on-click": "~/.config/waybar/scripts/powermenu.sh"
+  }
+}
+```
+
+## `waybar/style.css`
+
+```css
+/* Waybar — Gruvbox Dark Hard
+ *
+ * Tuned for 1920x1080 @ scale 1.0. Everything derives from the font-size and
+ * the em-based padding below, so changing font-size alone rescales the bar:
+ * 12px suits 1080p, ~14px suits 1440p, ~16px suits 4K at scale 1.
+ */
+
+@define-color bg        #1d2021;
+@define-color bg1       #3c3836;
+@define-color bg2       #504945;
+@define-color fg        #ebdbb2;
+@define-color muted     #928374;
+@define-color red       #fb4934;
+@define-color green     #b8bb26;
+@define-color yellow    #fabd2f;
+@define-color blue      #83a598;
+@define-color purple    #d3869b;
+@define-color aqua      #8ec07c;
+@define-color orange    #fe8019;
+
+* {
+  font-family: "JetBrainsMono Nerd Font", "Noto Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  border-radius: 0;
+  /* Let each widget claim only what its font needs -- combined with no fixed
+     bar height, this is what makes the bar scale with font-size. */
+  min-height: 0;
+  /* GTK draws a 1px focus outline on hover without this. */
+  box-shadow: none;
+  text-shadow: none;
+}
+
+window#waybar {
+  background: transparent;
+  color: @fg;
+}
+
+window#waybar.hidden {
+  opacity: 0.2;
+}
+
+.modules-left,
+.modules-center,
+.modules-right {
+  background-color: alpha(@bg, 0.92);
+  border: 1px solid @bg2;
+  border-radius: 8px;
+  padding: 0 0.25em;
+}
+
+#workspaces {
+  padding: 0 0.15em;
+}
+
+#workspaces button {
+  color: @muted;
+  /* em padding so the pill grows with the font rather than staying 6px. */
+  padding: 0.15em 0.5em;
+  margin: 0.25em 0.08em;
+  border-radius: 6px;
+  background: transparent;
+  transition: all 200ms ease;
+}
+
+#workspaces button:hover {
+  color: @fg;
+  background-color: @bg1;
+}
+
+#workspaces button.active {
+  color: @bg;
+  background-color: @orange;
+  padding: 0.15em 0.9em;
+}
+
+#workspaces button.urgent {
+  color: @bg;
+  background-color: @red;
+}
+
+#window {
+  color: @fg;
+  padding: 0 0.6em;
+}
+
+window#waybar.empty #window {
+  background: transparent;
+  border: none;
+}
+
+#clock {
+  color: @yellow;
+  font-weight: 700;
+  padding: 0 0.9em;
+}
+
+#tray,
+#privacy,
+#idle_inhibitor,
+#pulseaudio,
+#backlight,
+#network,
+#bluetooth,
+#cpu,
+#memory,
+#temperature,
+#battery,
+#custom-notification,
+#custom-power {
+  padding: 0.2em 0.55em;
+  margin: 0.25em 0.08em;
+  border-radius: 6px;
+}
+
+#pulseaudio        { color: @purple; }
+#backlight         { color: @yellow; }
+#network           { color: @green; }
+#bluetooth         { color: @blue; }
+#cpu               { color: @aqua; }
+#memory            { color: @purple; }
+#temperature       { color: @orange; }
+#battery           { color: @green; }
+#custom-notification { color: @yellow; }
+#idle_inhibitor    { color: @muted; }
+
+#idle_inhibitor.activated {
+  color: @bg;
+  background-color: @yellow;
+}
+
+#pulseaudio.muted,
+#network.disconnected,
+#bluetooth.disabled {
+  color: @muted;
+}
+
+#temperature.critical,
+#battery.critical:not(.charging) {
+  color: @bg;
+  background-color: @red;
+}
+
+/* Waybar only animates a property when the rule differs between states, so
+   the blink alternates against the .critical rule above. */
+@keyframes blink {
+  to {
+    background-color: @bg;
+    color: @red;
+  }
+}
+
+#battery.critical:not(.charging) {
+  animation-name: blink;
+  animation-duration: 1s;
+  animation-timing-function: steps(12);
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+#battery.warning:not(.charging) {
+  color: @orange;
+}
+
+#battery.charging,
+#battery.plugged {
+  color: @green;
+}
+
+#custom-power {
+  color: @red;
+  padding: 0.2em 0.7em 0.2em 0.55em;
+}
+
+#custom-power:hover {
+  color: @bg;
+  background-color: @red;
+}
+
+#tray > .passive {
+  -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+  -gtk-icon-effect: highlight;
+  background-color: @red;
+  border-radius: 6px;
+}
+
+#privacy-item.screenshare { color: @orange; }
+#privacy-item.audio-in    { color: @red; }
+
+tooltip {
+  background-color: @bg;
+  border: 1px solid @bg2;
+  border-radius: 6px;
+}
+
+tooltip label {
+  color: @fg;
+  padding: 0.25em;
+}
+```
+
+## `mako/config`
+
+```ini
+# mako — notification daemon, Gruvbox Dark Hard
+# Reload after editing:  makoctl reload
+
+sort=-time
+layer=overlay
+# Matches the niri layer-rule that blocks notifications from screen capture.
+namespace=notifications
+anchor=top-right
+output=
+max-visible=5
+
+font=JetBrainsMono Nerd Font 10
+background-color=#1d2021ee
+text-color=#ebdbb2
+border-color=#fe8019
+progress-color=over #504945
+
+width=380
+height=140
+margin=8,12,0,0
+padding=12
+border-size=2
+border-radius=8
+icon-path=/usr/share/icons/Adwaita
+max-icon-size=48
+markup=1
+actions=1
+format=<b>%s</b>\n%b
+default-timeout=6000
+ignore-timeout=0
+
+on-button-left=invoke-default-action
+on-button-middle=dismiss-all
+on-button-right=dismiss
+on-touch=dismiss
+# Needs `mpv` and `sound-theme-freedesktop`; uncomment for an audible ping.
+#on-notify=exec mpv --no-config --really-quiet /usr/share/sounds/freedesktop/stereo/message.oga
+
+[urgency=low]
+border-color=#928374
+text-color=#d5c4a1
+default-timeout=4000
+
+[urgency=normal]
+border-color=#fe8019
+
+[urgency=critical]
+border-color=#fb4934
+text-color=#fb4934
+default-timeout=0
+
+[mode=do-not-disturb]
+invisible=1
+
+[app-name="Volume"]
+group-by=app-name
+default-timeout=1500
+history=0
+```
+
+## `fuzzel/fuzzel.ini`
+
+```ini
+# fuzzel — application launcher, Gruvbox Dark Hard
+
+font=JetBrainsMono Nerd Font:size=11
+dpi-aware=no
+prompt="❯ "
+icon-theme=Adwaita
+terminal=foot -e
+layer=overlay
+lines=12
+width=45
+tabs=4
+horizontal-pad=20
+vertical-pad=12
+inner-pad=6
+line-height=22
+exit-on-keyboard-focus-loss=yes
+
+[colors]
+background=1d2021f0
+text=ebdbb2ff
+match=fabd2fff
+selection=3c3836ff
+selection-text=ebdbb2ff
+selection-match=fabd2fff
+border=fe8019ff
+
+[border]
+width=2
+radius=8
+
+[dmenu]
+exit-immediately-if-empty=yes
+
+[key-bindings]
+next=Down Control+n Tab
+prev=Up Control+p ISO_Left_Tab
+```
+
+## `swaylock/config`
+
+```ini
+# swaylock — screen locker, Gruvbox Dark Hard
+#
+# The screenshots/effect-*/fade-in lines below are swaylock-effects
+# extensions. Vanilla swaylock aborts on unknown options, so delete those four
+# lines unless you installed swaylock-effects.
+
+ignore-empty-password
+show-failed-attempts
+daemonize
+indicator-caps-lock
+indicator-radius=100
+indicator-thickness=8
+font=JetBrainsMono Nerd Font
+font-size=16
+
+screenshots
+effect-blur=8x5
+effect-vignette=0.3:0.5
+fade-in=0.2
+
+color=1d2021
+inside-color=1d202100
+inside-clear-color=fabd2f33
+inside-caps-lock-color=fe801933
+inside-ver-color=83a59833
+inside-wrong-color=fb493433
+
+ring-color=504945
+ring-clear-color=fabd2f
+ring-caps-lock-color=fe8019
+ring-ver-color=83a598
+ring-wrong-color=fb4934
+
+key-hl-color=b8bb26
+bs-hl-color=fb4934
+caps-lock-key-hl-color=b8bb26
+caps-lock-bs-hl-color=fb4934
+
+text-color=ebdbb2
+text-clear-color=1d2021
+text-caps-lock-color=fe8019
+text-ver-color=ebdbb2
+text-wrong-color=fb4934
+
+separator-color=00000000
+```
+
+## `foot/foot.ini`
+
+```ini
+# foot — terminal emulator, Gruvbox Dark Hard
+
+font=JetBrainsMono Nerd Font:size=11
+font-bold=JetBrainsMono Nerd Font:weight=bold:size=11
+line-height=15
+pad=10x10
+dpi-aware=no
+selection-target=clipboard
+
+[scrollback]
+lines=10000
+multiplier=3.0
+
+[cursor]
+style=beam
+blink=yes
+color=1d2021 ebdbb2
+
+[mouse]
+hide-when-typing=yes
+
+[colors]
+alpha=0.95
+background=1d2021
+foreground=ebdbb2
+
+regular0=1d2021
+regular1=cc241d
+regular2=98971a
+regular3=d79921
+regular4=458588
+regular5=b16286
+regular6=689d6a
+regular7=a89984
+
+bright0=928374
+bright1=fb4934
+bright2=b8bb26
+bright3=fabd2f
+bright4=83a598
+bright5=d3869b
+bright6=8ec07c
+bright7=ebdbb2
+
+selection-foreground=ebdbb2
+selection-background=504945
+urls=8ec07c
+```
+
+## Validate
+
+```bash
+niri validate -c ~/.config/niri/config.kdl
+makoctl reload
+```
+
+Two KDL rules worth remembering, since both bit this config:
+
+- Values like `on-demand` must be **quoted** — a bare identifier cannot be a
+  node argument.
+- A quoted string **cannot** be continued with a trailing backslash. Shell
+  commands passed to `spawn-at-startup` have to sit on one line.
+
+## Scaling the bar
+
+`waybar/config.jsonc` deliberately sets **no** `height`. The bar derives its
+height from `font-size` in `style.css` plus em-based padding, so one value
+rescales everything:
+
+| Display | `font-size` |
+|---|---|
+| 1920x1080 | `12px` (as shipped) |
+| 2560x1440 | `14px` |
+| 3840x2160 @ scale 1 | `16px` |
+
+A fixed `height` would clip tall Nerd Font glyphs instead of scaling.
+
+## Before first login
+
+- **Outputs.** Placeholders are shipped. Run `niri msg outputs` and edit the
+  `output` blocks to match your connectors.
+- **Wallpaper.** swaybg reads `~/.config/niri/wallpaper.jpg`; if it is missing
+  the `-c '#1d2021'` fallback keeps the background on-theme.
+- **swaylock.** The `screenshots`, `effect-blur`, `effect-vignette` and
+  `fade-in` lines are `swaylock-effects` extensions. Vanilla swaylock aborts on
+  unknown options — delete those four lines unless you installed the fork
+  (`paru -S swaylock-effects`).
+- **Nerd Font.** Install `ttf-jetbrains-mono-nerd` (Arch). The bar and configs
+  depend on its glyphs.
+
+  ## `niri/scripts/idle-brightness.sh`  — `chmod +x`
 
 ```bash
 #!/usr/bin/env bash
@@ -633,401 +1168,6 @@ case "${1:-}" in
 esac
 ```
 
-## `waybar/config.jsonc`
-
-```jsonc
-{
-  "layer": "top",
-  "position": "top",
-  "height": 34,
-  "spacing": 6,
-  "margin-top": 6,
-  "margin-left": 12,
-  "margin-right": 12,
-
-  "modules-left": ["niri/workspaces", "niri/window"],
-  "modules-center": ["clock"],
-  "modules-right": [
-    "tray",
-    "privacy",
-    "idle_inhibitor",
-    "pulseaudio",
-    "backlight",
-    "network",
-    "bluetooth",
-    "cpu",
-    "memory",
-    "temperature",
-    "battery",
-    "custom/notification",
-    "custom/power"
-  ],
-
-  "niri/workspaces": {
-    "format": "{icon}",
-    "format-icons": {
-      "active": "",
-      "default": "",
-      "empty": ""
-    },
-    "on-click": "activate"
-  },
-
-  "niri/window": {
-    "format": "{}",
-    "max-length": 60,
-    "separate-outputs": true,
-    "rewrite": {
-      "(.*) — Mozilla Firefox": "🌍 $1",
-      "(.*) - foot": "> $1",
-      "": "—"
-    }
-  },
-
-  "clock": {
-    "interval": 1,
-    "format": "{:%a %d %b  %H:%M}",
-    "format-alt": "{:%Y-%m-%d %H:%M:%S}",
-    "tooltip-format": "<tt><small>{calendar}</small></tt>",
-    "calendar": {
-      "mode": "month",
-      "weeks-pos": "right",
-      "on-scroll": 1,
-      "format": {
-        "months": "<span color='#c0caf5'><b>{}</b></span>",
-        "days": "<span color='#a9b1d6'>{}</span>",
-        "weeks": "<span color='#7dcfff'><b>W{}</b></span>",
-        "weekdays": "<span color='#e0af68'><b>{}</b></span>",
-        "today": "<span color='#f7768e'><b><u>{}</u></b></span>"
-      }
-    },
-    "actions": {
-      "on-click-right": "mode",
-      "on-scroll-up": "shift_up",
-      "on-scroll-down": "shift_down"
-    }
-  },
-
-  "tray": {
-    "icon-size": 16,
-    "spacing": 8
-  },
-
-  "privacy": {
-    "icon-size": 14,
-    "transition-duration": 250,
-    "modules": [
-      { "type": "screenshare", "tooltip": true },
-      { "type": "audio-in", "tooltip": true }
-    ]
-  },
-
-  "idle_inhibitor": {
-    "format": "{icon}",
-    "format-icons": { "activated": "", "deactivated": "" },
-    "tooltip-format-activated": "Idle inhibited — screen stays awake",
-    "tooltip-format-deactivated": "Idle inhibitor off"
-  },
-
-  "pulseaudio": {
-    "format": "{icon} {volume}%",
-    "format-muted": " muted",
-    "format-bluetooth": "{icon} {volume}%",
-    "format-bluetooth-muted": " muted",
-    "format-icons": {
-      "headphone": "",
-      "hands-free": "",
-      "headset": "",
-      "phone": "",
-      "portable": "",
-      "car": "",
-      "default": ["", "", ""]
-    },
-    "scroll-step": 5,
-    "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
-    "on-click-right": "pavucontrol",
-    "tooltip-format": "{desc} — {volume}%"
-  },
-
-  "backlight": {
-    "format": "{icon} {percent}%",
-    "format-icons": ["", "", "", "", "", "", "", "", ""],
-    "on-scroll-up": "brightnessctl --class=backlight set +5%",
-    "on-scroll-down": "brightnessctl --class=backlight set 5%-",
-    "tooltip": false
-  },
-
-  "network": {
-    "format-wifi": "  {signalStrength}%",
-    "format-ethernet": " ",
-    "format-linked": " ",
-    "format-disconnected": " ",
-    "tooltip-format-wifi": "{essid} ({signalStrength}%)\n{ipaddr}/{cidr}\n {bandwidthUpBits}  {bandwidthDownBits}",
-    "tooltip-format-ethernet": "{ifname}\n{ipaddr}/{cidr}\n {bandwidthUpBits}  {bandwidthDownBits}",
-    "tooltip-format-disconnected": "Disconnected",
-    "on-click": "foot -e nmtui"
-  },
-
-  "bluetooth": {
-    "format": "",
-    "format-disabled": "",
-    "format-connected": " {num_connections}",
-    "tooltip-format": "{controller_alias}\t{controller_address}",
-    "tooltip-format-connected": "{controller_alias}\n{device_enumerate}",
-    "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
-    "on-click": "blueman-manager"
-  },
-
-  "cpu": {
-    "interval": 3,
-    "format": " {usage}%",
-    "on-click": "foot -e btop"
-  },
-
-  "memory": {
-    "interval": 5,
-    "format": " {percentage}%",
-    "tooltip-format": "{used:0.1f}G / {total:0.1f}G  (swap {swapUsed:0.1f}G)",
-    "on-click": "foot -e btop"
-  },
-
-  "temperature": {
-    "interval": 5,
-    "critical-threshold": 82,
-    "format": "{icon} {temperatureC}°C",
-    "format-critical": " {temperatureC}°C",
-    "format-icons": ["", "", ""],
-    "tooltip": false
-  },
-
-  "battery": {
-    "interval": 10,
-    "states": { "warning": 25, "critical": 12 },
-    "format": "{icon} {capacity}%",
-    "format-charging": " {capacity}%",
-    "format-plugged": " {capacity}%",
-    "format-full": " {capacity}%",
-    "format-icons": ["", "", "", "", ""],
-    "tooltip-format": "{timeTo} ({power:0.1f} W)"
-  },
-
-  "custom/notification": {
-    "tooltip": true,
-    "format": "{}",
-    "exec": "~/.config/waybar/scripts/mako-status.sh",
-    "return-type": "json",
-    "interval": 3,
-    "on-click": "makoctl dismiss --all",
-    "on-click-right": "makoctl mode -t do-not-disturb"
-  },
-
-  "custom/power": {
-    "format": "",
-    "tooltip-format": "Power menu",
-    "on-click": "~/.config/waybar/scripts/powermenu.sh"
-  }
-}
-```
-
-## `waybar/style.css`
-
-```css
-/* Waybar — Tokyo Night */
-
-@define-color bg        #1a1b26;
-@define-color bg_alt    #24283b;
-@define-color fg        #c0caf5;
-@define-color muted     #565f89;
-@define-color blue      #7aa2f7;
-@define-color cyan      #7dcfff;
-@define-color green     #9ece6a;
-@define-color yellow    #e0af68;
-@define-color orange    #ff9e64;
-@define-color red       #f7768e;
-@define-color magenta   #bb9af7;
-
-* {
-  font-family: "JetBrainsMono Nerd Font", "Noto Sans", sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  border: none;
-  border-radius: 0;
-  min-height: 0;
-  /* GTK draws a 1px focus outline on hover without this. */
-  box-shadow: none;
-  text-shadow: none;
-}
-
-window#waybar {
-  background: transparent;
-  color: @fg;
-}
-
-window#waybar.hidden {
-  opacity: 0.2;
-}
-
-.modules-left,
-.modules-center,
-.modules-right {
-  background-color: alpha(@bg, 0.85);
-  border: 1px solid alpha(@blue, 0.25);
-  border-radius: 10px;
-  padding: 0 4px;
-}
-
-#workspaces {
-  padding: 0 2px;
-}
-
-#workspaces button {
-  color: @muted;
-  padding: 0 6px;
-  margin: 4px 1px;
-  border-radius: 8px;
-  background: transparent;
-  transition: all 200ms ease;
-}
-
-#workspaces button:hover {
-  color: @fg;
-  background-color: alpha(@blue, 0.18);
-}
-
-#workspaces button.active {
-  color: @blue;
-  background-color: alpha(@blue, 0.22);
-  padding: 0 12px;
-}
-
-#workspaces button.urgent {
-  color: @bg;
-  background-color: @red;
-}
-
-#window {
-  color: @fg;
-  padding: 0 10px;
-}
-
-window#waybar.empty #window {
-  background: transparent;
-  border: none;
-}
-
-#clock {
-  color: @cyan;
-  font-weight: 700;
-  padding: 0 14px;
-}
-
-#tray,
-#privacy,
-#idle_inhibitor,
-#pulseaudio,
-#backlight,
-#network,
-#bluetooth,
-#cpu,
-#memory,
-#temperature,
-#battery,
-#custom-notification,
-#custom-power {
-  padding: 0 8px;
-  margin: 4px 1px;
-  border-radius: 8px;
-}
-
-#pulseaudio        { color: @magenta; }
-#backlight         { color: @yellow; }
-#network           { color: @green; }
-#bluetooth         { color: @blue; }
-#cpu               { color: @cyan; }
-#memory            { color: @magenta; }
-#temperature       { color: @orange; }
-#battery           { color: @green; }
-#custom-notification { color: @yellow; }
-#idle_inhibitor    { color: @muted; }
-
-#idle_inhibitor.activated {
-  color: @bg;
-  background-color: @yellow;
-}
-
-#pulseaudio.muted,
-#network.disconnected,
-#bluetooth.disabled {
-  color: @muted;
-}
-
-#temperature.critical,
-#battery.critical:not(.charging) {
-  color: @bg;
-  background-color: @red;
-}
-
-/* Waybar only animates a property when the rule differs between states, so
-   the blink alternates against the .critical rule above. */
-@keyframes blink {
-  to {
-    background-color: @bg;
-    color: @red;
-  }
-}
-
-#battery.critical:not(.charging) {
-  animation-name: blink;
-  animation-duration: 1s;
-  animation-timing-function: steps(12);
-  animation-iteration-count: infinite;
-  animation-direction: alternate;
-}
-
-#battery.warning:not(.charging) {
-  color: @orange;
-}
-
-#battery.charging,
-#battery.plugged {
-  color: @green;
-}
-
-#custom-power {
-  color: @red;
-  padding: 0 12px 0 8px;
-}
-
-#custom-power:hover {
-  color: @bg;
-  background-color: @red;
-}
-
-#tray > .passive {
-  -gtk-icon-effect: dim;
-}
-
-#tray > .needs-attention {
-  -gtk-icon-effect: highlight;
-  background-color: @red;
-  border-radius: 8px;
-}
-
-#privacy-item.screenshare { color: @orange; }
-#privacy-item.audio-in    { color: @red; }
-
-tooltip {
-  background-color: @bg;
-  border: 1px solid alpha(@blue, 0.4);
-  border-radius: 8px;
-}
-
-tooltip label {
-  color: @fg;
-  padding: 4px;
-}
-```
-
 ## `waybar/scripts/mako-status.sh`  — `chmod +x`
 
 ```bash
@@ -1053,8 +1193,6 @@ else
 fi
 ```
 
-## `waybar/scripts/powermenu.sh`  — `chmod +x`
-
 ```bash
 #!/usr/bin/env bash
 # Power menu rendered with fuzzel's dmenu mode.
@@ -1077,239 +1215,4 @@ case "$choice" in
     *Reboot)    systemctl reboot ;;
     *"Shut down") systemctl poweroff ;;
 esac
-```
-
-## `mako/config`
-
-```ini
-# mako — notification daemon
-# Reload after editing:  makoctl reload
-
-sort=-time
-layer=overlay
-# Matches the niri layer-rule that blocks notifications from screen capture.
-namespace=notifications
-anchor=top-right
-output=
-max-visible=5
-
-font=JetBrainsMono Nerd Font 10
-background-color=#1a1b26ee
-text-color=#c0caf5
-border-color=#7aa2f7
-progress-color=over #3d59a1
-
-width=380
-height=140
-margin=10,14,0,0
-padding=12
-border-size=2
-border-radius=10
-icon-path=/usr/share/icons/Adwaita
-max-icon-size=48
-markup=1
-actions=1
-format=<b>%s</b>\n%b
-default-timeout=6000
-ignore-timeout=0
-
-on-button-left=invoke-default-action
-on-button-middle=dismiss-all
-on-button-right=dismiss
-on-touch=dismiss
-# Needs `mpv` and `sound-theme-freedesktop`; uncomment for an audible ping.
-#on-notify=exec mpv --no-config --really-quiet /usr/share/sounds/freedesktop/stereo/message.oga
-
-[urgency=low]
-border-color=#565f89
-text-color=#a9b1d6
-default-timeout=4000
-
-[urgency=normal]
-border-color=#7aa2f7
-
-[urgency=critical]
-border-color=#f7768e
-text-color=#f7768e
-default-timeout=0
-
-[mode=do-not-disturb]
-invisible=1
-
-[app-name="Volume"]
-group-by=app-name
-default-timeout=1500
-history=0
-```
-
-## `fuzzel/fuzzel.ini`
-
-```ini
-# fuzzel — application launcher
-
-font=JetBrainsMono Nerd Font:size=11
-dpi-aware=no
-prompt="❯ "
-icon-theme=Adwaita
-terminal=foot -e
-layer=overlay
-lines=12
-width=45
-tabs=4
-horizontal-pad=20
-vertical-pad=12
-inner-pad=6
-line-height=22
-exit-on-keyboard-focus-loss=yes
-
-[colors]
-background=1a1b26f0
-text=c0caf5ff
-match=7dcfffff
-selection=283457ff
-selection-text=c0caf5ff
-selection-match=7dcfffff
-border=7aa2f7ff
-
-[border]
-width=2
-radius=10
-
-[dmenu]
-exit-immediately-if-empty=yes
-
-[key-bindings]
-next=Down Control+n Tab
-prev=Up Control+p ISO_Left_Tab
-```
-
-## `swaylock/config`
-
-```ini
-# swaylock — screen locker
-
-ignore-empty-password
-show-failed-attempts
-daemonize
-indicator-caps-lock
-indicator-radius=100
-indicator-thickness=8
-font=JetBrainsMono Nerd Font
-font-size=16
-
-screenshots
-effect-blur=8x5
-effect-vignette=0.3:0.5
-fade-in=0.2
-
-color=1a1b26
-inside-color=1a1b2600
-inside-clear-color=e0af6833
-inside-caps-lock-color=ff9e6433
-inside-ver-color=7aa2f733
-inside-wrong-color=f7768e33
-
-ring-color=3b4261
-ring-clear-color=e0af68
-ring-caps-lock-color=ff9e64
-ring-ver-color=7aa2f7
-ring-wrong-color=f7768e
-
-key-hl-color=9ece6a
-bs-hl-color=f7768e
-caps-lock-key-hl-color=9ece6a
-caps-lock-bs-hl-color=f7768e
-
-text-color=c0caf5
-text-clear-color=1a1b26
-text-caps-lock-color=ff9e64
-text-ver-color=c0caf5
-text-wrong-color=f7768e
-
-separator-color=00000000
-```
-
-## `foot/foot.ini`
-
-```ini
-# foot — terminal emulator
-
-font=JetBrainsMono Nerd Font:size=11
-font-bold=JetBrainsMono Nerd Font:weight=bold:size=11
-line-height=15
-pad=10x10
-dpi-aware=no
-selection-target=clipboard
-
-[scrollback]
-lines=10000
-multiplier=3.0
-
-[cursor]
-style=beam
-blink=yes
-
-[mouse]
-hide-when-typing=yes
-
-[colors]
-alpha=0.95
-background=1a1b26
-foreground=c0caf5
-
-regular0=15161e
-regular1=f7768e
-regular2=9ece6a
-regular3=e0af68
-regular4=7aa2f7
-regular5=bb9af7
-regular6=7dcfff
-regular7=a9b1d6
-
-bright0=414868
-bright1=f7768e
-bright2=9ece6a
-bright3=e0af68
-bright4=7aa2f7
-bright5=bb9af7
-bright6=7dcfff
-bright7=c0caf5
-
-selection-foreground=c0caf5
-selection-background=283457
-urls=7dcfff
-
-[key-bindings]
-clipboard-copy=Control+Shift+c XF86Copy
-clipboard-paste=Control+Shift+v XF86Paste
-search-start=Control+Shift+r
-font-increase=Control+plus Control+equal
-font-decrease=Control+minus
-font-reset=Control+0
-```
-
-```bash
-❯ niri validate -c ~/.config/niri/config.kdl
-Error:   × error loading config
-  ├─▶ error parsing
-  ╰─▶ error parsing KDL
-
-Error:   × identifiers cannot be used as arguments
-    ╭─[config.kdl:42:1]
- 42 │     position x=0 y=0
- 43 │     variable-refresh-rate on-demand
-    ·                           ────┬────
-    ·                               ╰── unexpected identifier
- 44 │ }
-    ╰────
-  help: consider enclosing in double quotes ".."
-Error:   × found `\n`, expected `"`, `/`, `\`, `b`, `f`, `n`, `r`, `t` or `u`
-     ╭─[config.kdl:129:1]
- 129 │ // both instead of hardcoding one.
- 130 │ spawn-at-startup "/bin/sh" "-c" "\
-     ·                                   ┬
-     ·                                   ╰── invalid escape char
- 131 │     for p in /usr/libexec/polkit-gnome-authentication-agent-1 \
- 132 │              /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1 \
-     ╰────
 ```
