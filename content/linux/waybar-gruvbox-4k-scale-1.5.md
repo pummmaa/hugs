@@ -85,7 +85,7 @@ weight: 10
     "memory",
     "temperature",
     "battery",
-    "custom/powerprofile",
+    "power-profiles-daemon",
     "custom/notification",
     "custom/power"
   ],
@@ -206,7 +206,7 @@ weight: 10
 
   "memory": {
     "interval": 5,
-    "format": "\uf538  {percentage}%",
+    "format": "\uf1c0  {percentage}%",
     "tooltip-format": "{used:0.1f}G / {total:0.1f}G  (swap {swapUsed:0.1f}G)",
     "on-click": "foot -e btop"
   },
@@ -241,12 +241,16 @@ weight: 10
     "on-click-right": "makoctl mode -t do-not-disturb"
   },
 
-  "custom/powerprofile": {
-    "exec": "~/.config/waybar/scripts/powerprofile.sh",
-    "return-type": "json",
-    "interval": 5,
-    "on-click": "~/.config/waybar/scripts/powerprofile.sh toggle",
-    "tooltip": true
+  "power-profiles-daemon": {
+    "format": "{icon}",
+    "tooltip": true,
+    "tooltip-format": "Power profile: {profile}\nDriver: {driver}",
+    "format-icons": {
+      "default": "\uf24e",
+      "power-saver": "\uf06c",
+      "balanced": "\uf24e",
+      "performance": "\uf0e7"
+    }
   },
 
   "custom/power": {
@@ -377,7 +381,7 @@ window#waybar.empty #window {
 #temperature,
 #battery,
 #custom-notification,
-#custom-powerprofile,
+#power-profiles-daemon,
 #custom-power {
   padding: 0.2em 0.55em;
   margin: 0.25em 0.08em;
@@ -394,9 +398,10 @@ window#waybar.empty #window {
 #battery           { color: @green; }
 #custom-notification { color: @yellow; }
 #idle_inhibitor    { color: @muted; }
-#custom-powerprofile             { color: @green; }
-#custom-powerprofile.balanced    { color: @yellow; }
-#custom-powerprofile.performance { color: @red; }
+#power-profiles-daemon              { color: @green; }
+#power-profiles-daemon.power-saver  { color: @green; }
+#power-profiles-daemon.balanced     { color: @yellow; }
+#power-profiles-daemon.performance  { color: @red; }
 
 #idle_inhibitor.activated {
   color: @bg;
@@ -521,7 +526,8 @@ yellow / red.
 > Requires the `power-profiles-daemon` package (provides `powerprofilesctl`).
 > 
 
-**Script — `~/.config/waybar/scripts/powerprofile.sh`** (make it executable: `chmod +x`):
+> **Note:** this now uses waybar's **built-in `power-profiles-daemon` module** — no external script needed. The `.sh` block below is optional/legacy (only for very old waybar builds without the native module).
+> 
 
 ```sh
 #!/bin/sh
@@ -557,7 +563,7 @@ printf '{"text":"%s","class":"%s","tooltip":"Power profile: %s (click to cycle)"
 
 ```kdl
 Mod+P hotkey-overlay-title="Cycle Power Profile" {
-    spawn "/bin/sh" "-c" "~/.config/waybar/scripts/powerprofile.sh toggle";
+    spawn "/bin/sh" "-c" "p=$(powerprofilesctl get); case $p in power-saver) n=balanced;; balanced) n=performance;; *) n=power-saver;; esac; powerprofilesctl set $n";
 }
 ```
 
