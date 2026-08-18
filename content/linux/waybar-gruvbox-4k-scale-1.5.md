@@ -85,6 +85,7 @@ weight: 10
     "memory",
     "temperature",
     "battery",
+    "custom/powerprofile",
     "custom/notification",
     "custom/power"
   ],
@@ -141,8 +142,8 @@ weight: 10
   "idle_inhibitor": {
     "format": "{icon}",
     "format-icons": {
-      "activated": "\u25d0",
-      "deactivated": "\u25cb"
+      "activated": "\uf06e",
+      "deactivated": "\uf070"
     },
     "tooltip-format-activated": "Idle inhibited \u2014 screen stays awake",
     "tooltip-format-deactivated": "Idle inhibitor off"
@@ -154,13 +155,13 @@ weight: 10
     "format-bluetooth": " {icon} {volume}%",
     "format-bluetooth-muted": " \ufc5d muted",
     "format-icons": {
-      "headphone": "",
-      "hands-free": "",
-      "headset": "",
-      "phone": "",
-      "portable": "",
-      "car": "",
-      "default": ["", "", ""]
+      "headphone": "\uf025",
+      "hands-free": "\uf590",
+      "headset": "\uf590",
+      "phone": "\uf095",
+      "portable": "\uf10b",
+      "car": "\uf1b9",
+      "default": ["\uf026", "\uf027", "\uf028"]
     },
     "scroll-step": 5,
     "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
@@ -170,16 +171,16 @@ weight: 10
 
   "backlight": {
     "format": "{icon} {percent}%",
-    "format-icons": ["", "", "", "", "", "", "", "", ""],
+    "format-icons": ["\uf185", "\uf185", "\uf185", "\uf185", "\uf185", "\uf185", "\uf185", "\uf185", "\uf185"],
     "on-scroll-up": "brightnessctl --class=backlight set +5%",
     "on-scroll-down": "brightnessctl --class=backlight set 5%-",
     "tooltip": false
   },
 
   "network": {
-    "format-wifi": "  {signalStrength}%",
-    "format-ethernet": "  Connected",
-    "format-linked": "  Linked",
+    "format-wifi": "\uf1eb  {signalStrength}%",
+    "format-ethernet": "\uf0e8  Connected",
+    "format-linked": "\uf0e8  Linked",
     "format-disconnected": "\u2717 Disconnected",
     "tooltip-format-wifi": "{essid} ({signalStrength}%)\n{ipaddr}/{cidr}\n {bandwidthUpBits}  {bandwidthDownBits}",
     "tooltip-format-ethernet": "{ifname}\n{ipaddr}/{cidr}\n {bandwidthUpBits}  {bandwidthDownBits}",
@@ -188,9 +189,9 @@ weight: 10
   },
 
   "bluetooth": {
-    "format": " {num_connections}",
-    "format-disabled": " Off",
-    "format-connected": " {num_connections}",
+    "format": "\uf293 {num_connections}",
+    "format-disabled": "\uf294 Off",
+    "format-connected": "\uf293 {num_connections}",
     "tooltip-format": "{controller_alias}\t{controller_address}",
     "tooltip-format-connected": "{controller_alias}\n{device_enumerate}",
     "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
@@ -199,13 +200,13 @@ weight: 10
 
   "cpu": {
     "interval": 3,
-    "format": "  {usage}%",
+    "format": "\uf2db  {usage}%",
     "on-click": "foot -e btop"
   },
 
   "memory": {
     "interval": 5,
-    "format": "  {percentage}%",
+    "format": "\uf538  {percentage}%",
     "tooltip-format": "{used:0.1f}G / {total:0.1f}G  (swap {swapUsed:0.1f}G)",
     "on-click": "foot -e btop"
   },
@@ -215,7 +216,7 @@ weight: 10
     "critical-threshold": 82,
     "format": "{icon}",
     "format-critical": " \ud83c\udf21 {temperatureC}\u00b0C",
-    "format-icons": ["", "", ""],
+    "format-icons": ["\uf2cb", "\uf2c9", "\uf2c7"],
     "tooltip-format": "{temperatureC}\u00b0C"
   },
 
@@ -223,10 +224,10 @@ weight: 10
     "interval": 10,
     "states": { "warning": 25, "critical": 12 },
     "format": "{icon} {capacity}%",
-    "format-charging": "  {capacity}%",
-    "format-plugged": "  {capacity}%",
-    "format-full": "  {capacity}%",
-    "format-icons": ["", "", "", "", ""],
+    "format-charging": "\uf0e7  {capacity}%",
+    "format-plugged": "\uf1e6  {capacity}%",
+    "format-full": "\uf240  {capacity}%",
+    "format-icons": ["\uf244", "\uf243", "\uf242", "\uf241", "\uf240"],
     "tooltip-format": "{timeTo} ({power:0.1f} W)"
   },
 
@@ -240,8 +241,16 @@ weight: 10
     "on-click-right": "makoctl mode -t do-not-disturb"
   },
 
+  "custom/powerprofile": {
+    "exec": "~/.config/waybar/scripts/powerprofile.sh",
+    "return-type": "json",
+    "interval": 5,
+    "on-click": "~/.config/waybar/scripts/powerprofile.sh toggle",
+    "tooltip": true
+  },
+
   "custom/power": {
-    "format": "  ",
+    "format": "\uf011",
     "tooltip-format": "Power menu",
     "on-click": "~/.config/waybar/scripts/powermenu.sh"
   }
@@ -368,6 +377,7 @@ window#waybar.empty #window {
 #temperature,
 #battery,
 #custom-notification,
+#custom-powerprofile,
 #custom-power {
   padding: 0.2em 0.55em;
   margin: 0.25em 0.08em;
@@ -384,6 +394,9 @@ window#waybar.empty #window {
 #battery           { color: @green; }
 #custom-notification { color: @yellow; }
 #idle_inhibitor    { color: @muted; }
+#custom-powerprofile             { color: @green; }
+#custom-powerprofile.balanced    { color: @yellow; }
+#custom-powerprofile.performance { color: @red; }
 
 #idle_inhibitor.activated {
   color: @bg;
@@ -495,6 +508,61 @@ output scale. Pick it from the scale you run on a 4K panel:
 Set the matching `scale` on the `output` block in your niri `config.kdl`; waybar
 picks up the compositor scale automatically. Because the bar has **no fixed
 `height`** and uses `em`-based padding, the logical `font-size` rescales it all.
+
+---
+
+## 🔋 Power Profile Toggle (`power-profiles-daemon`)
+
+A click-to-cycle module that switches the laptop between **power-saver → balanced →
+performance** using `powerprofilesctl`. It shows a Nerd Font icon per state
+( saver ·  balanced ·  performance) and colors itself green /
+yellow / red.
+
+> Requires the `power-profiles-daemon` package (provides `powerprofilesctl`).
+> 
+
+**Script — `~/.config/waybar/scripts/powerprofile.sh`** (make it executable: `chmod +x`):
+
+```sh
+#!/bin/sh
+# powerprofile.sh — waybar module + toggle for power-profiles-daemon
+# Usage:
+#   powerprofile.sh          -> print JSON status for waybar
+#   powerprofile.sh toggle   -> cycle power-saver -> balanced -> performance
+
+cur=$(powerprofilesctl get 2>/dev/null)
+
+if [ "$1" = "toggle" ]; then
+  case "$cur" in
+    power-saver) next=balanced ;;
+    balanced)    next=performance ;;
+    performance) next=power-saver ;;
+    *)           next=balanced ;;
+  esac
+  powerprofilesctl set "$next" 2>/dev/null
+  exit 0
+fi
+
+case "$cur" in
+  power-saver) icon=""; cls=power-saver ;;
+  balanced)    icon="";  cls=balanced ;;
+  performance) icon=""; cls=performance ;;
+  *)           icon="";  cls=balanced ;;
+esac
+
+printf '{"text":"%s","class":"%s","tooltip":"Power profile: %s (click to cycle)"}\n' "$icon" "$cls" "${cur:-unknown}"
+```
+
+**Cycle from the keyboard — niri `config.kdl`:**
+
+```kdl
+Mod+P hotkey-overlay-title="Cycle Power Profile" {
+    spawn "/bin/sh" "-c" "~/.config/waybar/scripts/powerprofile.sh toggle";
+}
+```
+
+Press `Mod+P` to advance **power-saver → balanced → performance** (same action as
+clicking the bar module).
 
 ---
 
