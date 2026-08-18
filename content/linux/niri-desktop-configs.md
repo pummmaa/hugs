@@ -431,17 +431,18 @@ binds {
 {
   "layer": "top",
   "position": "top",
-
-  // No fixed "height": the bar sizes itself from the CSS font-size and
-  // padding, so bumping font-size in style.css scales the whole bar instead
-  // of clipping tall glyphs against a hardcoded pixel height.
+  "height": 28,
   "spacing": 4,
   "margin-top": 4,
   "margin-left": 8,
   "margin-right": 8,
-
-  "modules-left": ["niri/workspaces", "niri/window"],
-  "modules-center": ["clock"],
+  "modules-left": [
+    "niri/workspaces",
+    "niri/window"
+  ],
+  "modules-center": [
+    "clock"
+  ],
   "modules-right": [
     "tray",
     "privacy",
@@ -457,30 +458,15 @@ binds {
     "custom/notification",
     "custom/power"
   ],
-
   "niri/workspaces": {
-    "format": "{icon}",
-    "format-icons": {
-      "active": "",
-      "default": "",
-      "empty": ""
-    },
+    "format": "{index}",
     "on-click": "activate"
   },
-
   "niri/window": {
-    "format": "{}",
-    // 1920px minus the center clock and 13 right-hand modules leaves roughly
-    // this much room before the title starts pushing the clock off-center.
-    "max-length": 42,
-    "separate-outputs": true,
-    "rewrite": {
-      "(.*) — Mozilla Firefox": " $1",
-      "(.*) - foot": " $1",
-      "": "—"
-    }
+    "format": "{app_name}",
+    "max-length": 20,
+    "separate-outputs": true
   },
-
   "clock": {
     "interval": 1,
     "format": "{:%a %d %b  %H:%M}",
@@ -504,112 +490,134 @@ binds {
       "on-scroll-down": "shift_down"
     }
   },
-
   "tray": {
     "icon-size": 15,
     "spacing": 6
   },
-
   "privacy": {
     "icon-size": 13,
     "transition-duration": 250,
     "modules": [
-      { "type": "screenshare", "tooltip": true },
-      { "type": "audio-in", "tooltip": true }
+      {
+        "type": "screenshare",
+        "tooltip": true
+      },
+      {
+        "type": "audio-in",
+        "tooltip": true
+      }
     ]
   },
-
   "idle_inhibitor": {
     "format": "{icon}",
-    "format-icons": { "activated": "", "deactivated": "" },
+    "format-icons": {
+      "activated": "◐",
+      "deactivated": "○"
+    },
     "tooltip-format-activated": "Idle inhibited — screen stays awake",
     "tooltip-format-deactivated": "Idle inhibitor off"
   },
-
   "pulseaudio": {
     "format": "{icon} {volume}%",
-    "format-muted": "",
-    "format-bluetooth": "{icon} {volume}%",
-    "format-bluetooth-muted": "",
+    "format-muted": "ﱝ muted",
+    "format-bluetooth": " {icon} {volume}%",
+    "format-bluetooth-muted": " ﱝ muted",
     "format-icons": {
-      "headphone": "",
-      "hands-free": "",
-      "headset": "",
-      "phone": "",
-      "portable": "",
-      "car": "",
-      "default": ["", "", ""]
+      "headphone": "",
+      "hands-free": "",
+      "headset": "",
+      "phone": "",
+      "portable": "",
+      "car": "",
+      "default": [
+        "",
+        "",
+        ""
+      ]
     },
     "scroll-step": 5,
     "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
     "on-click-right": "pavucontrol",
     "tooltip-format": "{desc} — {volume}%"
   },
-
   "backlight": {
     "format": "{icon} {percent}%",
-    "format-icons": ["", "", "", "", "", "", "", "", ""],
+    "format-icons": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
     "on-scroll-up": "brightnessctl --class=backlight set +5%",
     "on-scroll-down": "brightnessctl --class=backlight set 5%-",
     "tooltip": false
   },
-
   "network": {
-    // Icon only on the bar; the percentage and SSID live in the tooltip. At
-    // 1080p the right-hand group is the width bottleneck.
-    "format-wifi": "",
-    "format-ethernet": "",
-    "format-linked": "",
-    "format-disconnected": "",
+    "format-wifi": "  {signalStrength}%",
+    "format-ethernet": "  Connected",
+    "format-linked": "  Linked",
+    "format-disconnected": "✗ Disconnected",
     "tooltip-format-wifi": "{essid} ({signalStrength}%)\n{ipaddr}/{cidr}\n {bandwidthUpBits}  {bandwidthDownBits}",
     "tooltip-format-ethernet": "{ifname}\n{ipaddr}/{cidr}\n {bandwidthUpBits}  {bandwidthDownBits}",
     "tooltip-format-disconnected": "Disconnected",
     "on-click": "foot -e nmtui"
   },
-
   "bluetooth": {
-    "format": "",
-    "format-disabled": "",
-    "format-connected": " {num_connections}",
+    "format": " {num_connections}",
+    "format-disabled": " Off",
+    "format-connected": " {num_connections}",
     "tooltip-format": "{controller_alias}\t{controller_address}",
     "tooltip-format-connected": "{controller_alias}\n{device_enumerate}",
     "tooltip-format-enumerate-connected": "{device_alias}\t{device_address}",
     "on-click": "blueman-manager"
   },
-
   "cpu": {
     "interval": 3,
-    "format": " {usage}%",
+    "format": "  {usage}%",
     "on-click": "foot -e btop"
   },
-
   "memory": {
     "interval": 5,
-    "format": " {percentage}%",
+    "format": "  {percentage}%",
     "tooltip-format": "{used:0.1f}G / {total:0.1f}G  (swap {swapUsed:0.1f}G)",
     "on-click": "foot -e btop"
   },
-
   "temperature": {
     "interval": 5,
     "critical-threshold": 82,
     "format": "{icon}",
-    "format-critical": " {temperatureC}°C",
-    "format-icons": ["", "", ""],
+    "format-critical": " 🌡 {temperatureC}°C",
+    "format-icons": [
+      "",
+      "",
+      ""
+    ],
     "tooltip-format": "{temperatureC}°C"
   },
-
   "battery": {
     "interval": 10,
-    "states": { "warning": 25, "critical": 12 },
+    "states": {
+      "warning": 25,
+      "critical": 12
+    },
     "format": "{icon} {capacity}%",
-    "format-charging": " {capacity}%",
-    "format-plugged": " {capacity}%",
-    "format-full": " {capacity}%",
-    "format-icons": ["", "", "", "", ""],
+    "format-charging": "  {capacity}%",
+    "format-plugged": "  {capacity}%",
+    "format-full": "  {capacity}%",
+    "format-icons": [
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
     "tooltip-format": "{timeTo} ({power:0.1f} W)"
   },
-
   "custom/notification": {
     "tooltip": true,
     "format": "{}",
@@ -619,11 +627,16 @@ binds {
     "on-click": "makoctl dismiss --all",
     "on-click-right": "makoctl mode -t do-not-disturb"
   },
-
   "custom/power": {
-    "format": "",
+    "format": "  ",
     "tooltip-format": "Power menu",
     "on-click": "~/.config/waybar/scripts/powermenu.sh"
+  },
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "width": "container",
+  "autosize": {
+    "type": "fit-x",
+    "contains": "padding"
   }
 }
 ```
