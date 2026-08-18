@@ -120,3 +120,72 @@ niri hot-reloads `config.kdl` on save. To restart the idle daemon immediately:
 pkill swayidle    # niri's spawn-at-startup relaunches it on next login,
                   # or just log out/in to pick up the new chain
 ```
+
+## Lock.sh Script
+```bash
+#!/usr/bin/env bash
+# lock.sh — Gruvbox swaylock using swaybg's current wallpaper, sized per output.
+
+# ---- 1. find the current wallpaper ----
+get_wallpaper() {
+  if [ -r "$HOME/.cache/current_wallpaper" ]; then
+    cat "$HOME/.cache/current_wallpaper"; return
+  fi
+  for pid in $(pgrep -x swaybg); do
+    mapfile -t a < <(tr '\0' '\n' < "/proc/$pid/cmdline")
+    for i in "${!a[@]}"; do
+      case "${a[$i]}" in
+        -i|--image) echo "${a[$((i+1))]}"; return ;;
+      esac
+    done
+  done
+}
+
+# ---- 2. logical height of the focused output (accounts for scale) ----
+logical_height() {
+  if command -v niri >/dev/null && command -v jq >/dev/null; then
+    niri msg -j outputs 2>/dev/null \
+      | jq -r 'to_entries[].value | select(.logical!=null) | .logical.height' \
+      | head -1
+  fi
+}
+
+IMG="$(get_wallpaper)"
+LH="$(logical_height)"; [ -n "$LH" ] || LH=1080
+
+# ---- 3. derive sizes from logical height ----
+read -r RING FONT THICK <<EOF
+$(awk -v h="$LH" 'BEGIN{
+  r=int(h*0.10+0.5); f=int(h*0.0222+0.5); t=int(r/12+0.5); if(t<4)t=4;
+  print r, f, t }')
+EOF
+
+# ---- 4. capability-gated extras (plain swaylock AND swaylock-effects) ----
+have() { swaylock --help 2>&1 | grep -q -- "$1"; }
+
+EXTRA=()
+have --clock     && EXTRA+=(--clock)
+have --font-size && EXTRA+=(--font-size "$FONT")
+if have --effect-blur; then
+  EXTRA+=(--effect-blur 7x5 --effect-vignette 0.35:0.45 --fade-in 0.2)
+fi
+
+# ---- 5. background: image if found, else Gruvbox color ----
+if [ -n "$IMG" ] && [ -f "$IMG" ]; then BG=(-i "$IMG" --scaling=fill)
+else BG=(-c 1d2021); fi
+
+exec swaylock -f "${BG[@]}" \
+  --indicator \
+  --indicator-radius "$RING" --indicator-thickness "$THICK" \
+  --font "JetBrainsMono Nerd Font" \
+  --inside-color 1d2021aa --inside-ver-color 1d2021aa \
+  --inside-wrong-color 1d2021aa --inside-clear-color 1d2021aa \
+  --ring-color 504945ff --ring-ver-color 8ec07cff \
+  --ring-wrong-color fb4934ff --ring-clear-color fabd2fff \
+  --key-hl-color fe8019ff --bs-hl-color fb4934ff \
+  --line-color 00000000 --separator-color 00000000 \
+  --text-color ebdbb2ff --text-ver-color ebdbb2ff \
+  --text-wrong-color fb4934ff --text-clear-color fabd2fff \
+  --text-caps-lock-color fe8019ff \
+  "${EXTRA[@]}"
+```
