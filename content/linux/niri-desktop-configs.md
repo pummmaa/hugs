@@ -289,7 +289,8 @@ binds {
 
     // Launching
     Mod+Return hotkey-overlay-title="Terminal" { spawn "foot"; }
-    Mod+D hotkey-overlay-title="Run an Application" { spawn "fuzzel"; }
+    Mod+D hotkey-overlay-title="Run/close launcher (toggle)" {
+    spawn "/bin/sh" "-c" "pkill -x fuzzel || fuzzel";}
     Mod+E hotkey-overlay-title="File Manager" { spawn "foot" "-e" "yazi"; }
     // Debian names the binary firefox-esr; Arch and upstream use firefox.
     Mod+B hotkey-overlay-title="Web Browser" { spawn "/bin/sh" "-c" "command -v firefox >/dev/null && exec firefox || exec firefox-esr"; }
