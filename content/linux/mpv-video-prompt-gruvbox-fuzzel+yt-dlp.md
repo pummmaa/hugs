@@ -226,3 +226,9 @@ Delete it to clear, or edit by hand. URLs are stored **unencrypted** — mind sh
 A Gruvbox-matched popup (orange border + selection, dark bg, JetBrainsMono Nerd Font — same look
 as your waybar/fuzzel) that plays any yt-dlp-supported URL in mpv and remembers your recent links
 for one-key replay.
+
+## Issues
+```bash
+ err: config.c:470: /home/toniiz/.config/fuzzel/fuzzel.ini:35: [key-bindings].next: Tab already mapped to 'execute-or-next'
+ err: config.c:470: /home/toniiz/.config/fuzzel/fuzzel.ini:36: [key-bindings].prev: ISO_Left_Tab already mapped to 'prev-with-wrap'
+```
