@@ -93,7 +93,7 @@ grep -oE '^[[:space:]]*[^[:space:]]+[[:space:]]+.*hotkey-overlay-title="[^"]*"' 
     split("\n") | map(select(length>0)) | map(split("\t"))
     | map({cat: .[0], key: .[1], title: .[2]}) as $rows
     | ($rows | map(.cat) | reduce .[] as $c ([]; if index($c) then . else . + [$c] end)) as $order
-    | $order | map(. as $c | {category: $c, binds: ($rows | map(select(.cat==$c) | {key, title}))})\''
+    | $order | map(. as $c | {category: $c, binds: ($rows | map(select(.cat==$c) | {key, title}))})'
 ```
 
 ---

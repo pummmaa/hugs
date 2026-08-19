@@ -92,7 +92,7 @@ output "eDP-1" {
     scale 1.0
     transform "normal"
     position x=0 y=0
-    variable-refresh-rate "on-demand"
+    // variable-refresh-rate "on-demand"
 }
 
 output "HDMI-A-1" {
@@ -173,6 +173,7 @@ overview {
 
 spawn-at-startup "waybar"
 spawn-at-startup "mako"
+spawn-at-startup "eww" "daemon"
 
 // Graphical password prompts for anything needing root (GUI package managers,
 // disk mounting). Without it those apps fail silently.
@@ -285,7 +286,9 @@ layer-rule {
 // Mod = Super. Press Mod+Shift+/ in the session for the live cheat sheet.
 
 binds {
-    Mod+Shift+Slash { show-hotkey-overlay; }
+    Mod+Shift+Slash hotkey-overlay-title="Show Keybinds" {
+    spawn "/bin/sh" "-c" "$HOME/.config/eww/scripts/toggle-cheatsheet.sh";
+}
 
     // Launching
     Mod+Return hotkey-overlay-title="Terminal" { spawn "foot"; }
