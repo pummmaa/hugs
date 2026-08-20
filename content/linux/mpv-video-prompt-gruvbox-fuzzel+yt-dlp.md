@@ -75,7 +75,10 @@ PH=()
 fuzzel --help 2>&1 | grep -q -- '--placeholder' && \
   PH=(--placeholder="Paste a video URL (YouTube, Twitch, …)")
 
-url=$(tac "$HIST" 2>/dev/null | fuzzel --dmenu \
+# --config=/dev/null: ignore ~/.config/fuzzel/fuzzel.ini so its
+# "exit-immediately-if-empty=yes" doesn't kill the prompt when history is empty.
+# All styling is supplied via the flags below, so the look is unchanged.
+url=$(tac "$HIST" 2>/dev/null | fuzzel --dmenu --config=/dev/null \
   --prompt="▶  " "${PH[@]}" \
   --font="JetBrainsMono Nerd Font:size=12" \
   --lines=8 --width=60 \
@@ -206,6 +209,9 @@ returns nothing for non-matching input, tell me and I'll switch the prompt to a 
 `fuzzel --dmenu --index`-free read.
 - **`--placeholder` is now auto-gated** — the script only passes it if `fuzzel --help` lists it,
 so older fuzzel won't error on it.
+- **Prompt opens then instantly closes / never shows on first run?** If your `fuzzel.ini` has
+`[dmenu] exit-immediately-if-empty=yes`, fuzzel quits when stdin is empty (empty history) — the
+script now passes `--config=/dev/null` to avoid inheriting that. (Styling is all via CLI flags.)
 - **Prompt doesn't appear at all?** fuzzel reads `~/.config/fuzzel/fuzzel.ini` on every launch, so
 a **broken fuzzel.ini blocks *all* fuzzel windows** (e.g. a `[key-bindings]` "already mapped"
 error). Test with `echo | fuzzel --dmenu` — if that shows nothing, fix `fuzzel.ini` first. The
@@ -244,35 +250,3 @@ Delete it to clear, or edit by hand. URLs are stored **unencrypted** — mind sh
 A Gruvbox-matched popup (orange border + selection, dark bg, JetBrainsMono Nerd Font — same look
 as your waybar/fuzzel) that plays any yt-dlp-supported URL in mpv and remembers your recent links
 for one-key replay.
-
-## Issues
-```bash
-+ set -u
-+ HIST=/home/toniiz/.local/share/mpv-play/history
-+ MAX_HIST=50
-++ dirname /home/toniiz/.local/share/mpv-play/history
-+ mkdir -p /home/toniiz/.local/share/mpv-play
-+ touch /home/toniiz/.local/share/mpv-play/history
-+ missing=
-+ for c in mpv yt-dlp fuzzel
-+ command -v mpv
-+ for c in mpv yt-dlp fuzzel
-+ command -v yt-dlp
-+ for c in mpv yt-dlp fuzzel
-+ command -v fuzzel
-+ '[' -n '' ']'
-+ PH=()
-+ fuzzel --help
-+ grep -q -- --placeholder
-+ PH=(--placeholder="Paste a video URL (YouTube, Twitch, …)")
-++ tac /home/toniiz/.local/share/mpv-play/history
-++ fuzzel --dmenu '--prompt=▶  ' '--placeholder=Paste a video URL (YouTube, Twitch, …)' '--font=JetBrainsMono Nerd Font:size=12' --lines=8 --width=60 --horizontal-pad=20 --vertical-pad=12 --inner-pad=8 --background=1d2021eb --text-color=ebdbb2ff --match-color=fabd2fff --selection-color=fe8019ff --selection-text-color=1d2021ff --selection-match-color=1d2021ff --border-color=fe8019ff --border-width=2 --border-radius=8
-+ url=
-+ status=1
-+ '[' 1 -gt 1 ']'
-++ printf %s ''
-++ sed -E 's/^[[:space:]]+|[[:space:]]+$//g'
-+ url=
-+ '[' -z '' ']'
-+ exit 0
-```
