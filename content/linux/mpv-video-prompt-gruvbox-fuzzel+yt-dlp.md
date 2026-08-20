@@ -21,7 +21,22 @@ pickable entries and new ones are remembered.
 
 ---
 
-## 🧩 What you'll create
+## Contents
+
+1. [Files you'll create](https://metamate.internalmeta.com/#files-youll-create)
+2. [Dependencies](https://metamate.internalmeta.com/#1-dependencies)
+3. [The script](https://metamate.internalmeta.com/#2-the-script)
+4. [Bind it in niri](https://metamate.internalmeta.com/#3-bind-it-in-niri)
+5. [Gruvbox OSD (optional)](https://metamate.internalmeta.com/#4-gruvbox-osd-optional)
+6. [Setup and test](https://metamate.internalmeta.com/#5-setup-and-test)
+7. [Playback performance (AMD Vega)](https://metamate.internalmeta.com/#6-playback-performance-amd-vega)
+8. [Update behavior](https://metamate.internalmeta.com/#7-update-behavior)
+9. [Caveats](https://metamate.internalmeta.com/#8-caveats)
+10. [What you get](https://metamate.internalmeta.com/#9-what-you-get)
+
+---
+
+## Files you'll create
 
 | File | Role |
 | --- | --- |
@@ -43,7 +58,9 @@ The script also checks these at runtime and tells you the exact install command 
 
 ---
 
-## 2. `~/.config/niri/scripts/mpv-play.sh`  (`chmod +x`)
+## 2. The script
+
+**File:** `~/.config/niri/scripts/mpv-play.sh` — make executable with `chmod +x`
 
 ```bash
 #!/usr/bin/env bash
@@ -157,7 +174,7 @@ fi
 
 ---
 
-## 3. Bind it in niri `config.kdl`
+## 3. Bind it in niri
 
 ```kdl
 Mod+Shift+Y hotkey-overlay-title="Media: Play a Video (mpv)" {
@@ -258,7 +275,9 @@ from the screen edge. Change `640x360` in the script to resize.
 
 ---
 
-## 4. (Optional) Gruvbox OSD — `~/.config/mpv/mpv.conf`
+## 4. Gruvbox OSD (optional)
+
+**File:** `~/.config/mpv/mpv.conf`
 
 mpv's window is video, but you can tint its on-screen display to match:
 
@@ -275,7 +294,7 @@ force-window=immediate
 
 ---
 
-## 5. Setup & test
+## 5. Setup and test
 
 ```bash
 mkdir -p ~/.config/niri/scripts
@@ -287,7 +306,7 @@ Type a URL and press **Enter**. Pick an earlier URL from the list to replay it.
 
 ---
 
-## 🎮 Playback performance (AMD Ryzen 5 PRO 5675U / Vega)
+## 6. Playback performance (AMD Vega)
 
 Your iGPU (Vega) hardware-decodes **H.264, HEVC, and VP9** but **not AV1**. YouTube prefers AV1,
 which forces slow CPU decoding and the `no support for codec av1` error. The script now:
@@ -315,7 +334,7 @@ format string.
 
 ---
 
-## 🔄 Update behavior at a glance
+## 7. Update behavior
 
 - **Every 48 h (silent, no prompt):** a background refresh runs `yt-dlp -U` then
 `pipx upgrade yt-dlp` — effective only for **binary/pip/pipx** installs. Cadence is tracked in
@@ -332,7 +351,7 @@ normal system-update cadence.
 
 ---
 
-## ⚠️ Caveats
+## 8. Caveats
 
 - **Typing a new URL:** in `--dmenu` mode, fuzzel returns the **typed text** when it doesn't match
 a history entry — so just paste and press Enter. This relies on fuzzel ≥ 1.9. If your build
@@ -388,7 +407,7 @@ Delete it to clear, or edit by hand. URLs are stored **unencrypted** — mind sh
 
 ---
 
-## 6. What you get
+## 9. What you get
 
 A Gruvbox-matched popup (orange border + selection, dark bg, JetBrainsMono Nerd Font — same look
 as your waybar/fuzzel) that plays any yt-dlp-supported URL in mpv and remembers your recent links
