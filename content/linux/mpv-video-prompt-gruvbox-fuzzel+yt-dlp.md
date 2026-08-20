@@ -23,16 +23,16 @@ pickable entries and new ones are remembered.
 
 ## Contents
 
-1. [Files you'll create](https://metamate.internalmeta.com/#files-youll-create)
-2. [Dependencies](https://metamate.internalmeta.com/#1-dependencies)
-3. [The script](https://metamate.internalmeta.com/#2-the-script)
-4. [Bind it in niri](https://metamate.internalmeta.com/#3-bind-it-in-niri)
-5. [Gruvbox OSD (optional)](https://metamate.internalmeta.com/#4-gruvbox-osd-optional)
-6. [Setup and test](https://metamate.internalmeta.com/#5-setup-and-test)
-7. [Playback performance (AMD Vega)](https://metamate.internalmeta.com/#6-playback-performance-amd-vega)
-8. [Update behavior](https://metamate.internalmeta.com/#7-update-behavior)
-9. [Caveats](https://metamate.internalmeta.com/#8-caveats)
-10. [What you get](https://metamate.internalmeta.com/#9-what-you-get)
+- Files you'll create
+- 1. Dependencies
+- 2. The script
+- 3. Bind it in niri
+- 4. Gruvbox OSD (optional)
+- 5. Setup and test
+- 6. Playback performance (AMD Vega)
+- 7. Update behavior
+- 8. Caveats
+- 9. What you get
 
 ---
 
