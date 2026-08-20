@@ -70,18 +70,31 @@ if [ -n "$missing" ]; then
 fi
 
 # ---- Gruvbox fuzzel prompt: history as entries; type a new URL or pick one ----
+# --placeholder needs fuzzel >= 1.9; gate it so older builds don't error out.
+PH=()
+fuzzel --help 2>&1 | grep -q -- '--placeholder' && \
+  PH=(--placeholder="Paste a video URL (YouTube, Twitch, …)")
+
 url=$(tac "$HIST" 2>/dev/null | fuzzel --dmenu \
-  --prompt="▶  " \
-  --placeholder="Paste a video URL (YouTube, Twitch, …)" \
+  --prompt="▶  " "${PH[@]}" \
   --font="JetBrainsMono Nerd Font:size=12" \
   --lines=8 --width=60 \
   --horizontal-pad=20 --vertical-pad=12 --inner-pad=8 \
   --background=1d2021eb --text-color=ebdbb2ff --match-color=fabd2fff \
   --selection-color=fe8019ff --selection-text-color=1d2021ff \
   --selection-match-color=1d2021ff --border-color=fe8019ff \
-  --border-width=2 --border-radius=8) || exit 0
+  --border-width=2 --border-radius=8)
+status=$?
 
-# trim whitespace; bail if empty
+# 0 = picked/typed, 1 = cancelled (Esc). Anything else = fuzzel error, e.g. a bad
+# flag or a broken ~/.config/fuzzel/fuzzel.ini -> surface it instead of hiding it.
+if [ "$status" -gt 1 ]; then
+  notify-send "mpv-play" "fuzzel failed (exit $status). Test 'echo | fuzzel --dmenu' and check ~/.config/fuzzel/fuzzel.ini" 2>/dev/null
+  echo "fuzzel exited $status — test 'echo | fuzzel --dmenu'; check fuzzel.ini" >&2
+  exit 1
+fi
+
+# trim whitespace; bail if empty (cancelled)
 url=$(printf '%s' "$url" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')
 [ -z "$url" ] && exit 0
 
@@ -191,7 +204,12 @@ normal system-update cadence.
 a history entry — so just paste and press Enter. This relies on fuzzel ≥ 1.9. If your build
 returns nothing for non-matching input, tell me and I'll switch the prompt to a plain
 `fuzzel --dmenu --index`-free read.
-- **`--placeholder` needs fuzzel ≥ 1.9.** Older fuzzel errors on it — remove that one line if so.
+- **`--placeholder` is now auto-gated** — the script only passes it if `fuzzel --help` lists it,
+so older fuzzel won't error on it.
+- **Prompt doesn't appear at all?** fuzzel reads `~/.config/fuzzel/fuzzel.ini` on every launch, so
+a **broken fuzzel.ini blocks *all* fuzzel windows** (e.g. a `[key-bindings]` "already mapped"
+error). Test with `echo | fuzzel --dmenu` — if that shows nothing, fix `fuzzel.ini` first. The
+script now notifies on fuzzel errors instead of exiting silently.
 - **mpv must find yt-dlp:** `--script-opts=ytdl_hook-ytdl_path=yt-dlp` forces mpv's hook to use
 `yt-dlp` (not the abandoned `youtube-dl`).
 - **Self-update (built in, pacman/dnf aware):** a **no-prompt refresh every 48h** tries
@@ -226,9 +244,3 @@ Delete it to clear, or edit by hand. URLs are stored **unencrypted** — mind sh
 A Gruvbox-matched popup (orange border + selection, dark bg, JetBrainsMono Nerd Font — same look
 as your waybar/fuzzel) that plays any yt-dlp-supported URL in mpv and remembers your recent links
 for one-key replay.
-
-## Issues
-```bash
- err: config.c:470: /home/toniiz/.config/fuzzel/fuzzel.ini:35: [key-bindings].next: Tab already mapped to 'execute-or-next'
- err: config.c:470: /home/toniiz/.config/fuzzel/fuzzel.ini:36: [key-bindings].prev: ISO_Left_Tab already mapped to 'prev-with-wrap'
-```
