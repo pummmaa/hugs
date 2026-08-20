@@ -139,7 +139,10 @@ MPV_ARGS=(--script-opts=ytdl_hook-ytdl_path=yt-dlp
           # force a currently-working YouTube client to dodge 403s (harmless for other sites).
           # -append keeps the comma-separated client list intact (mpv won't split it).
           --ytdl-raw-options-append=extractor-args=youtube:player_client=web_safari,default
-          --ytdl-format="bestvideo[height<=?1080]+bestaudio/best"
+          # avoid AV1 (Vega has no AV1 hw decode) -> prefer VP9/H.264
+          --ytdl-format="bestvideo[vcodec!*=av01][height<=?1080]+bestaudio/bestvideo[height<=?1080]+bestaudio/best"
+          --hwdec=auto-safe        # VA-API hardware decode on AMD (radeonsi)
+          --vo=gpu
           --force-window=immediate
           --ontop                  # keep the video above other windows
           --title=mpv-pip          # fixed title so niri can match this window
@@ -210,6 +213,34 @@ chmod +x ~/.config/niri/scripts/mpv-play.sh
 ```
 
 Type a URL and press **Enter**. Pick an earlier URL from the list to replay it.
+
+---
+
+## 🎮 Playback performance (AMD Ryzen 5 PRO 5675U / Vega)
+
+Your iGPU (Vega) hardware-decodes **H.264, HEVC, and VP9** but **not AV1**. YouTube prefers AV1,
+which forces slow CPU decoding and the `no support for codec av1` error. The script now:
+
+- **Excludes AV1** in the format string (`vcodec!*=av01`), so it picks a VP9/H.264 stream your GPU
+can decode. VP9 covers up to 1080p+ on YouTube.
+- **Enables VA-API hw decode** with `--hwdec=auto-safe --vo=gpu`.
+
+**Install the VA-API driver + check it works:**
+
+```bash
+sudo pacman -S libva-mesa-driver libva-utils   # radeonsi VA-API + vainfo
+vainfo                                          # should list VP9/H264/HEVC decode entrypoints
+```
+
+`vainfo` will show VP9/H264/HEVC under "VAProfile…VLD" but **no AV1** — that's expected on Vega.
+
+**Verify mpv is using hardware decode:** press **`i`** in mpv (stats), or launch once with
+`mpv --msg-level=vd=v <url>` and look for `Using hardware decoding (vaapi)`. If it says software,
+confirm `libva-mesa-driver` is installed and `$LIBVA_DRIVER_NAME` isn't forced to something wrong
+(leave it unset, or `export LIBVA_DRIVER_NAME=radeonsi`).
+
+- If you want to also cap resolution lower for even lighter load, change `1080` to `720` in the
+format string.
 
 ---
 
