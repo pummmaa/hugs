@@ -23,7 +23,20 @@ in), plus a `cosmicmsg subscribe` watcher and its XDG autostart entry.
 
 ---
 
-## 1. `~/.config/scripts/mpv-play.sh`  (`chmod +x`)
+## Contents
+
+1. [Player script — mpv-play.sh](https://thrift.internalfb.com/#1-player-script)
+2. [Sticky watcher — cosmic-mpv-sticky.sh](https://thrift.internalfb.com/#2-sticky-watcher)
+3. [Autostart entry](https://thrift.internalfb.com/#3-autostart-entry)
+4. [Wire-up checklist](https://thrift.internalfb.com/#4-wire-up-checklist)
+5. [Keybind (RON)](https://thrift.internalfb.com/#5-keybind-ron)
+6. [Caveats and limitations](https://thrift.internalfb.com/#6-caveats-and-limitations)
+
+---
+
+## 1. Player script
+
+**File:** `~/.config/scripts/mpv-play.sh` — make executable with `chmod +x`
 
 ```bash
 #!/usr/bin/env bash
@@ -135,7 +148,9 @@ fi
 
 ---
 
-## 2. `~/.config/scripts/cosmic-mpv-sticky.sh`  (`chmod +x`)
+## 2. Sticky watcher
+
+**File:** `~/.config/scripts/cosmic-mpv-sticky.sh` — make executable with `chmod +x`
 
 Reactive watcher: re-applies sticky to any `mpv-pip` window as events arrive (in case a fresh
 window opens or COSMIC drops the flag).
@@ -156,7 +171,9 @@ done
 
 ---
 
-## 3. Autostart — `~/.config/autostart/cosmic-mpv-sticky.desktop`
+## 3. Autostart entry
+
+**File:** `~/.config/autostart/cosmic-mpv-sticky.desktop`
 
 COSMIC honors XDG autostart. **`Exec` must be an absolute path** (no `$HOME` expansion) — edit the
 username to match yours:
@@ -195,7 +212,7 @@ Log out/in (or run the watcher once by hand) to start the autostart entry.
 
 ---
 
-## 5. Keybind via RON (instead of the Settings GUI)
+## 5. Keybind (RON)
 
 COSMIC stores custom shortcuts in:
 
@@ -226,7 +243,7 @@ shell expansion of `$HOME`):
 
 ---
 
-## ⚠️ Caveats (unchanged from the COSMIC adaptation)
+## 6. Caveats and limitations
 
 - **Sticky works natively** via `cosmicmsg window set-sticky` — verify the exact on/off arg with
 `cosmicmsg window set-sticky --help` if your build differs.
