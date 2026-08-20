@@ -261,3 +261,30 @@ Delete it to clear, or edit by hand. URLs are stored **unencrypted** — mind sh
 A Gruvbox-matched popup (orange border + selection, dark bg, JetBrainsMono Nerd Font — same look
 as your waybar/fuzzel) that plays any yt-dlp-supported URL in mpv and remembers your recent links
 for one-key replay.
+
+```bash
+Invalid value for option background: #1d2021
+Valid values are:
+    none
+    color
+    tiles
+Error parsing option background (option parameter could not be parsed)
+/home/toniiz/.config/mpv/mpv.conf:6: setting option background='#1d2021' failed.
+[ffmpeg] https: HTTP error 403 Forbidden
+Failed to open https://rr5---sn-bvvbaxivnuxqjvhj5nu-n4vd.googlevideo.com/videoplayback?expire=1787210155&ei=S1WGavPjBqD9sfIPpLHHmAs&ip=73.252.137.162&id=o-AJCYHFRGCa5ICv6oK8a0zLfp9aSVEKKNJ5tcrAGwxUtt&itag=251&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=1106&met=1787188555%2C&mh=Xh&mm=18%2C29&mn=sn-bvvbaxivnuxqjvhj5nu-n4vd%2Csn-n4v7snse&ms=aub%2Crdu&mv=m&mvi=5&pl=23&rms=aub%2Caub&initcwndbps=3662500&bui=AR3QkAmwTMjm4U-83LxIV3cn53CGcluC6CKyTbXBJQ1OfRK21I9b6KV7rEs7z7FcGjdOzDY8IUYgUO7m&spc=KBGBctGZBGOAqx6bd1PzOaEyVMga4gDNdmwetAsdCA&vprv=1&svpuc=1&xtags=acont%3Doriginal%3Alang%3Den-US&mime=audio%2Fwebm&rqh=1&gir=yes&clen=6517221&dur=409.241&lmt=1787184871422274&mt=1787188149&fvip=2&keepalive=yes&fexp=51565115%2C51946838&c=ANDROID_VR&txp=3308224&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cxtags%2Cmime%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&sig=AE0s2JYwRQIgBcrh6puGuqmNZvHbBi-EYR5ivACAMxvbWQIqspnAOc4CIQDI3qMuTZBTBXwjftaw3LS-ifPK5A-7RbgWZ_sPSeTsaA%3D%3D&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRQIhAOoFieOEBRyWl4f_Ceh5wzcRRJSAVsnfu30CMOgyfzVDAiBagVcjXrJ3KErvnzi3w0ugmec8GEZv4l6gXbo72AGjeQ%3D%3D.
+EDL: Could not open source file 'https://rr5---sn-bvvbaxivnuxqjvhj5nu-n4vd.googlevideo.com/videoplayback?expire=1787210155&ei=S1WGavPjBqD9sfIPpLHHmAs&ip=73.252.137.162&id=o-AJCYHFRGCa5ICv6oK8a0zLfp9aSVEKKNJ5tcrAGwxUtt&itag=251&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=1106&met=1787188555%2C&mh=Xh&mm=18%2C29&mn=sn-bvvbaxivnuxqjvhj5nu-n4vd%2Csn-n4v7snse&ms=aub%2Crdu&mv=m&mvi=5&pl=23&rms=aub%2Caub&initcwndbps=3662500&bui=AR3QkAmwTMjm4U-83LxIV3cn53CGcluC6CKyTbXBJQ1OfRK21I9b6KV7rEs7z7FcGjdOzDY8IUYgUO7m&spc=KBGBctGZBGOAqx6bd1PzOaEyVMga4gDNdmwetAsdCA&vprv=1&svpuc=1&xtags=acont%3Doriginal%3Alang%3Den-US&mime=audio%2Fwebm&rqh=1&gir=yes&clen=6517221&dur=409.241&lmt=1787184871422274&mt=1787188149&fvip=2&keepalive=yes&fexp=51565115%2C51946838&c=ANDROID_VR&txp=3308224&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cxtags%2Cmime%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&sig=AE0s2JYwRQIgBcrh6puGuqmNZvHbBi-EYR5ivACAMxvbWQIqspnAOc4CIQDI3qMuTZBTBXwjftaw3LS-ifPK5A-7RbgWZ_sPSeTsaA%3D%3D&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRQIhAOoFieOEBRyWl4f_Ceh5wzcRRJSAVsnfu30CMOgyfzVDAiBagVcjXrJ3KErvnzi3w0ugmec8GEZv4l6gXbo72AGjeQ%3D%3D'.
+No video or audio streams selected.
+Exiting... (Errors when loading file)
+Invalid value for option background: #1d2021
+Valid values are:
+    none
+    color
+    tiles
+Error parsing option background (option parameter could not be parsed)
+/home/toniiz/.config/mpv/mpv.conf:6: setting option background='#1d2021' failed.
+[ffmpeg] https: HTTP error 403 Forbidden
+Failed to open https://rr5---sn-bvvbaxivnuxqjvhj5nu-n4vd.googlevideo.com/videoplayback?expire=1787210161&ei=UFWGarqwO4yHt7EPndXciAU&ip=73.252.137.162&id=o-APIWvYeCsPy1NZ8u5uukS8weqYJszsUGG8vTlqcSv7mC&itag=251&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=1110&met=1787188561%2C&mh=Xh&mm=18%2C29&mn=sn-bvvbaxivnuxqjvhj5nu-n4vd%2Csn-n4v7snse&ms=aub%2Crdu&mv=m&mvi=5&pl=23&rms=aub%2Caub&initcwndbps=3662500&bui=AR3QkAkDsKfRVEzEqJykqm3YZowBProRWFoJ2G6TdyuXAoPB0TQmbpAH7kgji_o64r5qDoifZ3nQU7MQ&spc=KBGBcqXXCA6amzXPs9TeQtgqNHbvQsXVRB-n7SWBwA&vprv=1&svpuc=1&xtags=acont%3Doriginal%3Alang%3Den-US&mime=audio%2Fwebm&rqh=1&gir=yes&clen=6517221&dur=409.241&lmt=1787184871422274&mt=1787188149&fvip=2&keepalive=yes&fexp=51565115%2C51946838&c=ANDROID_VR&txp=3308224&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cxtags%2Cmime%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&sig=AE0s2JYwRgIhAMdACfosuCy9ESZgGmTee8MU9NSyRHDeByTrBfd5NkMXAiEAnfPq7LGnUXTSslRuwiOxpdiydJyXrTHjqgS1_hmzQow%3D&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRQIhAKCEF2BXgtXEkoc7GT9LnhJrY3XT7_-XCsQ5B292zmEmAiAI0JZWFjGaqDBFiG_Lhv16t3kzENVtSfbOfJGa8FUF4w%3D%3D.
+EDL: Could not open source file 'https://rr5---sn-bvvbaxivnuxqjvhj5nu-n4vd.googlevideo.com/videoplayback?expire=1787210161&ei=UFWGarqwO4yHt7EPndXciAU&ip=73.252.137.162&id=o-APIWvYeCsPy1NZ8u5uukS8weqYJszsUGG8vTlqcSv7mC&itag=251&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=1110&met=1787188561%2C&mh=Xh&mm=18%2C29&mn=sn-bvvbaxivnuxqjvhj5nu-n4vd%2Csn-n4v7snse&ms=aub%2Crdu&mv=m&mvi=5&pl=23&rms=aub%2Caub&initcwndbps=3662500&bui=AR3QkAkDsKfRVEzEqJykqm3YZowBProRWFoJ2G6TdyuXAoPB0TQmbpAH7kgji_o64r5qDoifZ3nQU7MQ&spc=KBGBcqXXCA6amzXPs9TeQtgqNHbvQsXVRB-n7SWBwA&vprv=1&svpuc=1&xtags=acont%3Doriginal%3Alang%3Den-US&mime=audio%2Fwebm&rqh=1&gir=yes&clen=6517221&dur=409.241&lmt=1787184871422274&mt=1787188149&fvip=2&keepalive=yes&fexp=51565115%2C51946838&c=ANDROID_VR&txp=3308224&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cxtags%2Cmime%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&sig=AE0s2JYwRgIhAMdACfosuCy9ESZgGmTee8MU9NSyRHDeByTrBfd5NkMXAiEAnfPq7LGnUXTSslRuwiOxpdiydJyXrTHjqgS1_hmzQow%3D&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRQIhAKCEF2BXgtXEkoc7GT9LnhJrY3XT7_-XCsQ5B292zmEmAiAI0JZWFjGaqDBFiG_Lhv16t3kzENVtSfbOfJGa8FUF4w%3D%3D'.
+No video or audio streams selected.
+Exiting... (Errors when loading file)
+```
