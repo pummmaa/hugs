@@ -250,3 +250,47 @@ Delete it to clear, or edit by hand. URLs are stored **unencrypted** — mind sh
 A Gruvbox-matched popup (orange border + selection, dark bg, JetBrainsMono Nerd Font — same look
 as your waybar/fuzzel) that plays any yt-dlp-supported URL in mpv and remembers your recent links
 for one-key replay.
+
+```bash
+❯ bash -x ~/.config/niri/scripts/mpv-play.sh 2>&1 | tail -40
+Failed to open https://rr5---sn-bvvbaxivnuxqjvhj5nu-n4vd.googlevideo.com/videoplayback?expire=1787209478&ei=plKGap6mCP6TsfIP6oTMmAY&ip=73.252.137.162&id=o-AI1CYuwccAoItHStCge9trLab-9WfNm8fctKP4w4ow_v&itag=251&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=1101&met=1787187878%2C&mh=Xh&mm=18%2C29&mn=sn-bvvbaxivnuxqjvhj5nu-n4vd%2Csn-2on4v5-59&ms=aub%2Crdu&mv=m&mvi=5&pl=23&rms=aub%2Caub&initcwndbps=3941250&bui=AR3QkAktkOyA_f1bBDHBdnOgLa7kXIHydK6eM_PoHJuXRdiCKeZORj4IvYCs3UkC_0ED7xO5TvEd5WZp&spc=KBGBcisgK364hc2t1XRw9rXQcG8HwqAJNKQB8xmw4A&vprv=1&svpuc=1&xtags=acont%3Doriginal%3Alang%3Den-US&mime=audio%2Fwebm&rqh=1&gir=yes&clen=6517221&dur=409.241&lmt=1787184871422274&mt=1787187437&fvip=5&keepalive=yes&fexp=51565115%2C51946838&c=ANDROID_VR&txp=3308224&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cxtags%2Cmime%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&sig=AE0s2JYwRgIhAOWekPZDZRLa8iNJBN2yZld1J5bx_zNHIN8s3W9l9DXUAiEAtk4uvcX4nsChehnWzBe2mHASiQihHA599tEXiMfv-ZQ%3D&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRgIhAMHt78_mKBHOiELYVrz1mYR4CKsT99yQh8lPTlYHPpe7AiEA4N1ZAQpvZNOxxRdq--nEDCgx4cGVpm9M7CBfKZoKhZQ%3D.
+EDL: Could not open source file 'https://rr5---sn-bvvbaxivnuxqjvhj5nu-n4vd.googlevideo.com/videoplayback?expire=1787209478&ei=plKGap6mCP6TsfIP6oTMmAY&ip=73.252.137.162&id=o-AI1CYuwccAoItHStCge9trLab-9WfNm8fctKP4w4ow_v&itag=251&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=1101&met=1787187878%2C&mh=Xh&mm=18%2C29&mn=sn-bvvbaxivnuxqjvhj5nu-n4vd%2Csn-2on4v5-59&ms=aub%2Crdu&mv=m&mvi=5&pl=23&rms=aub%2Caub&initcwndbps=3941250&bui=AR3QkAktkOyA_f1bBDHBdnOgLa7kXIHydK6eM_PoHJuXRdiCKeZORj4IvYCs3UkC_0ED7xO5TvEd5WZp&spc=KBGBcisgK364hc2t1XRw9rXQcG8HwqAJNKQB8xmw4A&vprv=1&svpuc=1&xtags=acont%3Doriginal%3Alang%3Den-US&mime=audio%2Fwebm&rqh=1&gir=yes&clen=6517221&dur=409.241&lmt=1787184871422274&mt=1787187437&fvip=5&keepalive=yes&fexp=51565115%2C51946838&c=ANDROID_VR&txp=3308224&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cxtags%2Cmime%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&sig=AE0s2JYwRgIhAOWekPZDZRLa8iNJBN2yZld1J5bx_zNHIN8s3W9l9DXUAiEAtk4uvcX4nsChehnWzBe2mHASiQihHA599tEXiMfv-ZQ%3D&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRgIhAMHt78_mKBHOiELYVrz1mYR4CKsT99yQh8lPTlYHPpe7AiEA4N1ZAQpvZNOxxRdq--nEDCgx4cGVpm9M7CBfKZoKhZQ%3D'.
+No video or audio streams selected.
+Exiting... (Errors when loading file)
++ notify-send mpv 'Playback failed — updating yt-dlp and retrying…'
++ update_ytdl pm
++ yt-dlp -U
++ command -v pipx
++ '[' pm = pm ']'
++ '[' 1 = 1 ']'
++ command -v pkexec
++ '[' -r /etc/os-release ']'
++ . /etc/os-release
+++ NAME='Arch Linux'
+++ PRETTY_NAME='Arch Linux'
+++ ID=arch
+++ BUILD_ID=rolling
+++ ANSI_COLOR='38;2;23;147;209'
+++ HOME_URL=https://archlinux.org/
+++ DOCUMENTATION_URL=https://wiki.archlinux.org/
+++ SUPPORT_URL=https://bbs.archlinux.org/
+++ BUG_REPORT_URL=https://gitlab.archlinux.org/groups/archlinux/-/issues
+++ PRIVACY_POLICY_URL=https://terms.archlinux.org/docs/privacy-policy/
+++ LOGO=archlinux-logo
++ case " ${ID:-} ${ID_LIKE:-} " in
++ notify-send mpv-play 'yt-dlp is out of date — run: sudo pacman -Syu'
++ return 1
++ mpv --script-opts=ytdl_hook-ytdl_path=yt-dlp '--ytdl-format=bestvideo[height<=?1080]+bestaudio/best' --force-window=immediate 'https://www.youtube.com/watch?v=weAhvBVwijg&pp=ugUEEgJlbg%3D%3D'
+Invalid value for option background: #1d2021
+Valid values are:
+    none
+    color
+    tiles
+Error parsing option background (option parameter could not be parsed)
+/home/toniiz/.config/mpv/mpv.conf:6: setting option background='#1d2021' failed.
+[ffmpeg] https: HTTP error 403 Forbidden
+Failed to open https://rr5---sn-bvvbaxivnuxqjvhj5nu-n4vd.googlevideo.com/videoplayback?expire=1787209483&ei=q1KGasLgCuycsfIP_fGgyAU&ip=73.252.137.162&id=o-ABuLSqnrruOhvXrbQWWHkVsIsxRhe2hIc4gWefSS8rZo&itag=251&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=1075&met=1787187883%2C&mh=Xh&mm=18%2C29&mn=sn-bvvbaxivnuxqjvhj5nu-n4vd%2Csn-2on4v5-59&ms=aub%2Crdu&mv=m&mvi=5&pl=23&rms=aub%2Caub&initcwndbps=4012500&bui=AR3QkAnGyhKY8rEm-sFwns-mh-lr8powwfu_Bgd6iJjB1h5JMTH9-NZNUmNEcavn6ugdMa71iQl3Eb3z&spc=KBGBcmHnYEMGdyJ_1hM-6iPaFr0neGxvPxQxlmkjEA&vprv=1&svpuc=1&xtags=acont%3Doriginal%3Alang%3Den-US&mime=audio%2Fwebm&rqh=1&gir=yes&clen=6517221&dur=409.241&lmt=1787184871422274&mt=1787187671&fvip=5&keepalive=yes&fexp=51565115%2C51946838&c=ANDROID_VR&txp=3308224&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cxtags%2Cmime%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&sig=AE0s2JYwRQIgW63rmdqu0N7OLVvjQiqFi-89Ey6yEJyOkQtB30V-qTgCIQD6F4Hs4Em4TcHI6oOpBChgXsbSjCXX4Y8TiH-U-XWcLg%3D%3D&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRAIgZyqn0CkZM2QyRwRZl5ugXD_WPRM_enCYIlDe7LkYWQACIBpurZ6-yk5EeR7igQpH6wpEppFAA0zYn-ipRwaers1F.
+EDL: Could not open source file 'https://rr5---sn-bvvbaxivnuxqjvhj5nu-n4vd.googlevideo.com/videoplayback?expire=1787209483&ei=q1KGasLgCuycsfIP_fGgyAU&ip=73.252.137.162&id=o-ABuLSqnrruOhvXrbQWWHkVsIsxRhe2hIc4gWefSS8rZo&itag=251&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=1075&met=1787187883%2C&mh=Xh&mm=18%2C29&mn=sn-bvvbaxivnuxqjvhj5nu-n4vd%2Csn-2on4v5-59&ms=aub%2Crdu&mv=m&mvi=5&pl=23&rms=aub%2Caub&initcwndbps=4012500&bui=AR3QkAnGyhKY8rEm-sFwns-mh-lr8powwfu_Bgd6iJjB1h5JMTH9-NZNUmNEcavn6ugdMa71iQl3Eb3z&spc=KBGBcmHnYEMGdyJ_1hM-6iPaFr0neGxvPxQxlmkjEA&vprv=1&svpuc=1&xtags=acont%3Doriginal%3Alang%3Den-US&mime=audio%2Fwebm&rqh=1&gir=yes&clen=6517221&dur=409.241&lmt=1787184871422274&mt=1787187671&fvip=5&keepalive=yes&fexp=51565115%2C51946838&c=ANDROID_VR&txp=3308224&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cxtags%2Cmime%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&sig=AE0s2JYwRQIgW63rmdqu0N7OLVvjQiqFi-89Ey6yEJyOkQtB30V-qTgCIQD6F4Hs4Em4TcHI6oOpBChgXsbSjCXX4Y8TiH-U-XWcLg%3D%3D&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRAIgZyqn0CkZM2QyRwRZl5ugXD_WPRM_enCYIlDe7LkYWQACIBpurZ6-yk5EeR7igQpH6wpEppFAA0zYn-ipRwaers1F'.
+No video or audio streams selected.
+Exiting... (Errors when loading file)
+```
