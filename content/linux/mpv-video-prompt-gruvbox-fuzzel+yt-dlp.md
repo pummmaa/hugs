@@ -182,6 +182,77 @@ window-rule {
 - `--ontop` (added to the script) asks mpv to stay above other windows. Under niri this is
 best-effort — floating windows already render above the tiled layout, and `--ontop` keeps it
 above other floating windows too. You can toggle it at runtime in mpv with **`T`**.
+
+**Show it on every workspace (sticky):** niri has **no native** "show on all workspaces" flag, so
+use the helper **`niri-float-sticky`**, scoped to just the `mpv-pip` window:
+
+```bash
+# not in official repos — pick one:
+paru -S niri-float-sticky        # AUR
+# or: go install github.com/probeldev/niri-float-sticky@latest
+# or: nix profile install github:probeldev/niri-float-sticky
+```
+
+Then add to `config.kdl`:
+
+```kdl
+spawn-at-startup "niri-float-sticky" "-title" "mpv-pip"
+```
+
+It watches workspace switches and moves any floating window whose **title matches `mpv-pip`** (the
+exact title the script sets) onto the current workspace — so the video follows you everywhere. The
+`-title` filter leaves your other floating windows untouched.
+
+### Pacman-free DIY alternative (niri IPC only, no AUR)
+
+If you'd rather not install `niri-float-sticky`, this small watcher does the same using only niri's
+own IPC (needs just `jq`, which you already have). Save as
+`~/.config/niri/scripts/mpv-sticky.sh` (`chmod +x`):
+
+```bash
+#!/usr/bin/env bash
+# mpv-sticky.sh — make the "mpv-pip" floating window follow you to every workspace,
+# using ONLY niri IPC. Start once at niri login.
+export PATH="$HOME/.local/bin:$PATH"
+
+TITLE_MATCH="mpv-pip"   # regex; matches the --title the mpv script sets
+
+move_matches_to_active() {
+  local ws
+  ws=$(niri msg --json workspaces | jq -r 'first(.[] | select(.is_focused) | .idx)')
+  [ -n "$ws" ] && [ "$ws" != "null" ] || return
+  niri msg --json windows     | jq -r --arg t "$TITLE_MATCH" '.[] | select((.title // "") | test($t)) | .id'     | while read -r id; do
+        [ -n "$id" ] && niri msg action move-window-to-workspace --window-id "$id" --focus false "$ws"
+      done
+}
+
+move_matches_to_active                       # initial pass
+niri msg --json event-stream | while read -r line; do
+  case "$line" in
+    *'"WorkspaceActivated"'*|*'"WorkspacesChanged"'*) move_matches_to_active ;;
+  esac
+done
+```
+
+Start it at login (in `config.kdl`):
+
+```kdl
+spawn-at-startup "/bin/sh" "-c" "exec $HOME/.config/niri/scripts/mpv-sticky.sh"
+```
+
+**How it works:** it tails niri's event stream; on every workspace switch it looks up the focused
+workspace's index and moves any window titled `mpv-pip` there with `--focus false` (no focus
+steal). Result: the PiP follows you everywhere — same effect as the AUR tool, zero extra packages.
+
+**Caveats:**
+
+- Needs `jq` (already a dependency).
+- **Multi-monitor:** it moves the window to the focused monitor's workspace of that index — fine on
+a single laptop screen; on multi-head it always pulls the PiP to wherever you are.
+- There's a brief jump as the window is moved on each switch (expected).
+- It matches by **title only**, so if you tile the mpv window it'll still get pulled along. If your
+niri build exposes `is_floating` in `niri msg --json windows`, add
+`select(.is_floating)` to the jq filter to only follow while floating.
 - For **bottom-left** instead, use `relative-to="bottom-left"`. Bump `x`/`y` to nudge the gap
 from the screen edge. Change `640x360` in the script to resize.
 
