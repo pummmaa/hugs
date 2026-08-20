@@ -20,6 +20,22 @@ every `hotkey-overlay-title`), toggles on `Mod+Shift+/`, and matches your waybar
 
 ---
 
+## Contents
+
+- 1. Dependencies
+- 2. File tree
+- 3. Parser script
+- 4. Toggle script
+- 5. eww.yuck (widgets)
+- 6. eww.scss (Gruvbox theme)
+- 7. niri config changes
+- 8. Adding and editing categories
+- 9. Run and verify
+- 10. Troubleshooting
+- 11. What you get
+
+---
+
 ## 1. Dependencies
 
 | Tool | Purpose | Arch | Fedora |
@@ -64,7 +80,9 @@ mkdir -p ~/.config/eww/scripts
 
 ---
 
-## 3. `~/.config/eww/scripts/parse-keybinds.sh`  (`chmod +x`)
+## 3. Parser script
+
+**File:** `~/.config/eww/scripts/parse-keybinds.sh` — make executable with `chmod +x`
 
 Parses every titled bind, splits its `Category: Label` title into a category + label, and groups them (preserving first-appearance order) into JSON `[{category, binds:[…]}, …]`.
 
@@ -98,7 +116,9 @@ grep -oE '^[[:space:]]*[^[:space:]]+[[:space:]]+.*hotkey-overlay-title="[^"]*"' 
 
 ---
 
-## 4. `~/.config/eww/scripts/toggle-cheatsheet.sh`  (`chmod +x`)
+## 4. Toggle script
+
+**File:** `~/.config/eww/scripts/toggle-cheatsheet.sh` — make executable with `chmod +x`
 
 ```bash
 #!/usr/bin/env bash
@@ -113,7 +133,9 @@ fi
 
 ---
 
-## 5. `~/.config/eww/eww.yuck`
+## 5. eww.yuck (widgets)
+
+**File:** `~/.config/eww/eww.yuck`
 
 ```lisp
 (defvar keybinds "[]")
@@ -148,7 +170,9 @@ fi
 
 ---
 
-## 6. `~/.config/eww/eww.scss`  (Gruvbox Dark Hard)
+## 6. eww.scss (Gruvbox theme)
+
+**File:** `~/.config/eww/eww.scss`
 
 ```scss
 * {
@@ -194,7 +218,7 @@ fi
 
 ---
 
-## 7. niri `config.kdl` changes
+## 7. niri config changes
 
 **a. Start the eww daemon at login** (add near your other `spawn-at-startup` lines):
 
@@ -227,7 +251,7 @@ layer-rule {
 
 ---
 
-## 7.5 Adding & editing categories
+## 8. Adding and editing categories
 
 Categories aren't hard-coded — **each bind declares its own** via a `Category: Label` prefix in
 its `hotkey-overlay-title`. To place a bind in a section, prefix the title:
@@ -254,7 +278,7 @@ for display and the `System` prefix still groups it.
 
 ---
 
-## 8. Run & verify
+## 9. Run and verify
 
 ```bash
 chmod +x ~/.config/eww/scripts/*.sh
@@ -266,7 +290,7 @@ Reload after editing SCSS/yuck: `eww reload`.
 
 ---
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 - **Panel empty / `[]`:** your binds may lack `hotkey-overlay-title="…"`. Only titled binds
 appear. Test the parser directly: `~/.config/eww/scripts/parse-keybinds.sh | jq`.
@@ -281,7 +305,7 @@ version prints a different format, adjust the `grep` in the toggle script.
 
 ---
 
-## 10. What you get
+## 11. What you get
 
 A centered, Gruvbox-framed, scrollable keybind panel — orange border, yellow header, orange
 "key" pills with dark text (mirroring your waybar active-workspace pill), `#ebdbb2` labels —
