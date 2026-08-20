@@ -19,7 +19,18 @@ niri, verified safe to run as one system. Includes the exact edits you need to m
 
 ---
 
-## 🧩 The pieces
+## Contents
+
+- 1. The pieces
+- 2. What the idle chain does
+- 3. Changes you need to make
+- 4. Notes and edge cases
+- 5. Apply
+- 6. lock.sh (full script)
+
+---
+
+## 1. The pieces
 
 | File | Role |
 | --- | --- |
@@ -33,7 +44,7 @@ swaylock surface. No shared state, so no conflicts.
 
 ---
 
-## 🔄 What the idle chain does
+## 2. What the idle chain does
 
 | Time | Action | Handler |
 | --- | --- | --- |
@@ -50,7 +61,7 @@ second run safely no-ops because the state file is already gone.
 
 ---
 
-## ✅ Changes you need to make
+## 3. Changes you need to make
 
 ### 1. `~/.config/niri/config.kdl` — replace the swayidle line
 
@@ -98,7 +109,7 @@ chmod +x ~/.config/niri/scripts/{idle-brightness.sh,lock.sh,wallpaper.sh}
 
 ---
 
-## ⚠️ Notes / edge cases (all handled, FYI)
+## 4. Notes and edge cases
 
 - **No double-lock:** swaylock is single-instance, so `timeout 300` + `before-sleep` + `lock`
 firing together is safe — extra calls just exit.
@@ -112,7 +123,7 @@ respects it (`now > saved → exit`) instead of yanking it back down.
 
 ---
 
-## 🔁 Apply
+## 5. Apply
 
 niri hot-reloads `config.kdl` on save. To restart the idle daemon immediately:
 
@@ -121,16 +132,23 @@ pkill swayidle    # niri's spawn-at-startup relaunches it on next login,
                   # or just log out/in to pick up the new chain
 ```
 
-## Lock.sh Script
+---
+
+## 6. lock.sh (full script)
+
+**File:** `~/.config/niri/scripts/lock.sh` — make executable with `chmod +x`
+
 ```bash
 #!/usr/bin/env bash
 # lock.sh — Gruvbox swaylock using swaybg's current wallpaper, sized per output.
 
 # ---- 1. find the current wallpaper ----
 get_wallpaper() {
+  # preferred: state file written by wallpaper.sh (see note below)
   if [ -r "$HOME/.cache/current_wallpaper" ]; then
     cat "$HOME/.cache/current_wallpaper"; return
   fi
+  # fallback: recover the -i / --image path from the running swaybg
   for pid in $(pgrep -x swaybg); do
     mapfile -t a < <(tr '\0' '\n' < "/proc/$pid/cmdline")
     for i in "${!a[@]}"; do
@@ -151,7 +169,7 @@ logical_height() {
 }
 
 IMG="$(get_wallpaper)"
-LH="$(logical_height)"; [ -n "$LH" ] || LH=1080
+LH="$(logical_height)"; [ -n "$LH" ] || LH=1080   # sane default
 
 # ---- 3. derive sizes from logical height ----
 read -r RING FONT THICK <<EOF
@@ -160,7 +178,7 @@ $(awk -v h="$LH" 'BEGIN{
   print r, f, t }')
 EOF
 
-# ---- 4. capability-gated extras (plain swaylock AND swaylock-effects) ----
+# ---- 4. capability-gated extras (works on plain swaylock AND swaylock-effects) ----
 have() { swaylock --help 2>&1 | grep -q -- "$1"; }
 
 EXTRA=()
@@ -170,12 +188,11 @@ if have --effect-blur; then
   EXTRA+=(--effect-blur 7x5 --effect-vignette 0.35:0.45 --fade-in 0.2)
 fi
 
-# ---- 5. background: image if found, else Gruvbox color ----
+# ---- 5. background arg: image if found, else Gruvbox color ----
 if [ -n "$IMG" ] && [ -f "$IMG" ]; then BG=(-i "$IMG" --scaling=fill)
 else BG=(-c 1d2021); fi
 
 exec swaylock -f "${BG[@]}" \
-  --indicator \
   --indicator-radius "$RING" --indicator-thickness "$THICK" \
   --font "JetBrainsMono Nerd Font" \
   --inside-color 1d2021aa --inside-ver-color 1d2021aa \
