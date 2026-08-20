@@ -25,12 +25,12 @@ in), plus a `cosmicmsg subscribe` watcher and its XDG autostart entry.
 
 ## Contents
 
-1. [Player script — mpv-play.sh](https://thrift.internalfb.com/#1-player-script)
-2. [Sticky watcher — cosmic-mpv-sticky.sh](https://thrift.internalfb.com/#2-sticky-watcher)
-3. [Autostart entry](https://thrift.internalfb.com/#3-autostart-entry)
-4. [Wire-up checklist](https://thrift.internalfb.com/#4-wire-up-checklist)
-5. [Keybind (RON)](https://thrift.internalfb.com/#5-keybind-ron)
-6. [Caveats and limitations](https://thrift.internalfb.com/#6-caveats-and-limitations)
+- 1. Player script
+- 2. Sticky watcher
+- 3. Autostart entry
+- 4. Wire-up checklist
+- 5. Keybind (RON)
+- 6. Caveats and limitations
 
 ---
 
