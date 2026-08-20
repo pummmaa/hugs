@@ -50,6 +50,10 @@ The script also checks these at runtime and tells you the exact install command 
 # mpv-play.sh — Gruvbox fuzzel prompt -> mpv (yt-dlp backend), with URL history.
 set -u
 
+# pipx installs yt-dlp to ~/.local/bin, which niri-spawned processes often DON'T
+# have on PATH -> "missing: yt-dlp". Prepend it so both the check and mpv's hook find it.
+export PATH="$HOME/.local/bin:$PATH"
+
 HIST="${XDG_DATA_HOME:-$HOME/.local/share}/mpv-play/history"
 MAX_HIST=50
 mkdir -p "$(dirname "$HIST")"; touch "$HIST"
@@ -136,7 +140,10 @@ MPV_ARGS=(--script-opts=ytdl_hook-ytdl_path=yt-dlp
           # -append keeps the comma-separated client list intact (mpv won't split it).
           --ytdl-raw-options-append=extractor-args=youtube:player_client=web_safari,default
           --ytdl-format="bestvideo[height<=?1080]+bestaudio/best"
-          --force-window=immediate)
+          --force-window=immediate
+          --ontop                  # keep the video above other windows
+          --title=mpv-pip          # fixed title so niri can match this window
+          --geometry=640x360)      # initial size (Wayland honors size, not position)
 notify-send "mpv" "Loading… $url" 2>/dev/null
 if ! mpv "${MPV_ARGS[@]}" "$url"; then
   notify-send "mpv" "Playback failed — updating yt-dlp and retrying…" 2>/dev/null
@@ -156,6 +163,24 @@ Mod+Shift+Y hotkey-overlay-title="Media: Play a Video (mpv)" {
 ```
 
 *(The `Media:` prefix means it also shows up in your eww cheat-sheet under a **Media** section.)*
+
+**Float it at the bottom of the screen** — add this window-rule to `config.kdl` (same pattern as
+your existing Picture-in-Picture rule). It matches the fixed `mpv-pip` title the script sets:
+
+```kdl
+window-rule {
+    match title=r#"^mpv-pip$"#
+    open-floating true
+    default-floating-position x=32 y=32 relative-to="bottom-right"
+}
+```
+
+- Size comes from mpv's `--geometry=640x360`; position/edge comes from the rule.
+- `--ontop` (added to the script) asks mpv to stay above other windows. Under niri this is
+best-effort — floating windows already render above the tiled layout, and `--ontop` keeps it
+above other floating windows too. You can toggle it at runtime in mpv with **`T`**.
+- For **bottom-left** instead, use `relative-to="bottom-left"`. Bump `x`/`y` to nudge the gap
+from the screen edge. Change `640x360` in the script to resize.
 
 ---
 
@@ -213,6 +238,11 @@ returns nothing for non-matching input, tell me and I'll switch the prompt to a 
 `fuzzel --dmenu --index`-free read.
 - **`--placeholder` is now auto-gated** — the script only passes it if `fuzzel --help` lists it,
 so older fuzzel won't error on it.
+- **"missing: yt-dlp" but it works in your terminal?** pipx installs to `~/.local/bin`, which
+niri-spawned processes often lack on `PATH`. The script now `export`s `~/.local/bin` onto its
+PATH. (Alternatively add `environment { PATH "/home/USER/.local/bin:/usr/bin"; }` to niri
+`config.kdl`, or set `ytdl_hook-ytdl_path` to the absolute path.) Check with
+`command -v yt-dlp` — expect `~/.local/bin/yt-dlp`.
 - **Prompt opens then instantly closes / never shows on first run?** If your `fuzzel.ini` has
 `[dmenu] exit-immediately-if-empty=yes`, fuzzel quits when stdin is empty (empty history) — the
 script now passes `--config=/dev/null` to avoid inheriting that. (Styling is all via CLI flags.)
@@ -261,30 +291,3 @@ Delete it to clear, or edit by hand. URLs are stored **unencrypted** — mind sh
 A Gruvbox-matched popup (orange border + selection, dark bg, JetBrainsMono Nerd Font — same look
 as your waybar/fuzzel) that plays any yt-dlp-supported URL in mpv and remembers your recent links
 for one-key replay.
-
-```bash
-Invalid value for option background: #1d2021
-Valid values are:
-    none
-    color
-    tiles
-Error parsing option background (option parameter could not be parsed)
-/home/toniiz/.config/mpv/mpv.conf:6: setting option background='#1d2021' failed.
-[ffmpeg] https: HTTP error 403 Forbidden
-Failed to open https://rr5---sn-bvvbaxivnuxqjvhj5nu-n4vd.googlevideo.com/videoplayback?expire=1787210155&ei=S1WGavPjBqD9sfIPpLHHmAs&ip=73.252.137.162&id=o-AJCYHFRGCa5ICv6oK8a0zLfp9aSVEKKNJ5tcrAGwxUtt&itag=251&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=1106&met=1787188555%2C&mh=Xh&mm=18%2C29&mn=sn-bvvbaxivnuxqjvhj5nu-n4vd%2Csn-n4v7snse&ms=aub%2Crdu&mv=m&mvi=5&pl=23&rms=aub%2Caub&initcwndbps=3662500&bui=AR3QkAmwTMjm4U-83LxIV3cn53CGcluC6CKyTbXBJQ1OfRK21I9b6KV7rEs7z7FcGjdOzDY8IUYgUO7m&spc=KBGBctGZBGOAqx6bd1PzOaEyVMga4gDNdmwetAsdCA&vprv=1&svpuc=1&xtags=acont%3Doriginal%3Alang%3Den-US&mime=audio%2Fwebm&rqh=1&gir=yes&clen=6517221&dur=409.241&lmt=1787184871422274&mt=1787188149&fvip=2&keepalive=yes&fexp=51565115%2C51946838&c=ANDROID_VR&txp=3308224&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cxtags%2Cmime%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&sig=AE0s2JYwRQIgBcrh6puGuqmNZvHbBi-EYR5ivACAMxvbWQIqspnAOc4CIQDI3qMuTZBTBXwjftaw3LS-ifPK5A-7RbgWZ_sPSeTsaA%3D%3D&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRQIhAOoFieOEBRyWl4f_Ceh5wzcRRJSAVsnfu30CMOgyfzVDAiBagVcjXrJ3KErvnzi3w0ugmec8GEZv4l6gXbo72AGjeQ%3D%3D.
-EDL: Could not open source file 'https://rr5---sn-bvvbaxivnuxqjvhj5nu-n4vd.googlevideo.com/videoplayback?expire=1787210155&ei=S1WGavPjBqD9sfIPpLHHmAs&ip=73.252.137.162&id=o-AJCYHFRGCa5ICv6oK8a0zLfp9aSVEKKNJ5tcrAGwxUtt&itag=251&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=1106&met=1787188555%2C&mh=Xh&mm=18%2C29&mn=sn-bvvbaxivnuxqjvhj5nu-n4vd%2Csn-n4v7snse&ms=aub%2Crdu&mv=m&mvi=5&pl=23&rms=aub%2Caub&initcwndbps=3662500&bui=AR3QkAmwTMjm4U-83LxIV3cn53CGcluC6CKyTbXBJQ1OfRK21I9b6KV7rEs7z7FcGjdOzDY8IUYgUO7m&spc=KBGBctGZBGOAqx6bd1PzOaEyVMga4gDNdmwetAsdCA&vprv=1&svpuc=1&xtags=acont%3Doriginal%3Alang%3Den-US&mime=audio%2Fwebm&rqh=1&gir=yes&clen=6517221&dur=409.241&lmt=1787184871422274&mt=1787188149&fvip=2&keepalive=yes&fexp=51565115%2C51946838&c=ANDROID_VR&txp=3308224&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cxtags%2Cmime%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&sig=AE0s2JYwRQIgBcrh6puGuqmNZvHbBi-EYR5ivACAMxvbWQIqspnAOc4CIQDI3qMuTZBTBXwjftaw3LS-ifPK5A-7RbgWZ_sPSeTsaA%3D%3D&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRQIhAOoFieOEBRyWl4f_Ceh5wzcRRJSAVsnfu30CMOgyfzVDAiBagVcjXrJ3KErvnzi3w0ugmec8GEZv4l6gXbo72AGjeQ%3D%3D'.
-No video or audio streams selected.
-Exiting... (Errors when loading file)
-Invalid value for option background: #1d2021
-Valid values are:
-    none
-    color
-    tiles
-Error parsing option background (option parameter could not be parsed)
-/home/toniiz/.config/mpv/mpv.conf:6: setting option background='#1d2021' failed.
-[ffmpeg] https: HTTP error 403 Forbidden
-Failed to open https://rr5---sn-bvvbaxivnuxqjvhj5nu-n4vd.googlevideo.com/videoplayback?expire=1787210161&ei=UFWGarqwO4yHt7EPndXciAU&ip=73.252.137.162&id=o-APIWvYeCsPy1NZ8u5uukS8weqYJszsUGG8vTlqcSv7mC&itag=251&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=1110&met=1787188561%2C&mh=Xh&mm=18%2C29&mn=sn-bvvbaxivnuxqjvhj5nu-n4vd%2Csn-n4v7snse&ms=aub%2Crdu&mv=m&mvi=5&pl=23&rms=aub%2Caub&initcwndbps=3662500&bui=AR3QkAkDsKfRVEzEqJykqm3YZowBProRWFoJ2G6TdyuXAoPB0TQmbpAH7kgji_o64r5qDoifZ3nQU7MQ&spc=KBGBcqXXCA6amzXPs9TeQtgqNHbvQsXVRB-n7SWBwA&vprv=1&svpuc=1&xtags=acont%3Doriginal%3Alang%3Den-US&mime=audio%2Fwebm&rqh=1&gir=yes&clen=6517221&dur=409.241&lmt=1787184871422274&mt=1787188149&fvip=2&keepalive=yes&fexp=51565115%2C51946838&c=ANDROID_VR&txp=3308224&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cxtags%2Cmime%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&sig=AE0s2JYwRgIhAMdACfosuCy9ESZgGmTee8MU9NSyRHDeByTrBfd5NkMXAiEAnfPq7LGnUXTSslRuwiOxpdiydJyXrTHjqgS1_hmzQow%3D&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRQIhAKCEF2BXgtXEkoc7GT9LnhJrY3XT7_-XCsQ5B292zmEmAiAI0JZWFjGaqDBFiG_Lhv16t3kzENVtSfbOfJGa8FUF4w%3D%3D.
-EDL: Could not open source file 'https://rr5---sn-bvvbaxivnuxqjvhj5nu-n4vd.googlevideo.com/videoplayback?expire=1787210161&ei=UFWGarqwO4yHt7EPndXciAU&ip=73.252.137.162&id=o-APIWvYeCsPy1NZ8u5uukS8weqYJszsUGG8vTlqcSv7mC&itag=251&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=1110&met=1787188561%2C&mh=Xh&mm=18%2C29&mn=sn-bvvbaxivnuxqjvhj5nu-n4vd%2Csn-n4v7snse&ms=aub%2Crdu&mv=m&mvi=5&pl=23&rms=aub%2Caub&initcwndbps=3662500&bui=AR3QkAkDsKfRVEzEqJykqm3YZowBProRWFoJ2G6TdyuXAoPB0TQmbpAH7kgji_o64r5qDoifZ3nQU7MQ&spc=KBGBcqXXCA6amzXPs9TeQtgqNHbvQsXVRB-n7SWBwA&vprv=1&svpuc=1&xtags=acont%3Doriginal%3Alang%3Den-US&mime=audio%2Fwebm&rqh=1&gir=yes&clen=6517221&dur=409.241&lmt=1787184871422274&mt=1787188149&fvip=2&keepalive=yes&fexp=51565115%2C51946838&c=ANDROID_VR&txp=3308224&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cxtags%2Cmime%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&sig=AE0s2JYwRgIhAMdACfosuCy9ESZgGmTee8MU9NSyRHDeByTrBfd5NkMXAiEAnfPq7LGnUXTSslRuwiOxpdiydJyXrTHjqgS1_hmzQow%3D&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRQIhAKCEF2BXgtXEkoc7GT9LnhJrY3XT7_-XCsQ5B292zmEmAiAI0JZWFjGaqDBFiG_Lhv16t3kzENVtSfbOfJGa8FUF4w%3D%3D'.
-No video or audio streams selected.
-Exiting... (Errors when loading file)
-```
