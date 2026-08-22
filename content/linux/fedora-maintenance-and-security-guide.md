@@ -37,6 +37,7 @@ A practical routine for keeping a Fedora workstation (including COSMIC / greetd 
   - 3.7 Security Review
   - 3.8 Verify Display Manager / Greeter
 - 4. Release Upgrades (Every ~6-12 Months)
+  - 4.1 Post-Upgrade Cleanup
 - 5. Btrfs Snapshots & Rollback (Timeshift / snapper)
   - 5.1 Check You're on Btrfs
   - 5.2 Option A — Timeshift (GUI + CLI, beginner-friendly)
@@ -242,6 +243,37 @@ sudo dnf distro-sync
 
 > Check that the target release is actually published before setting `--releasever`, and disable COPR/third-party repos that don't yet have builds for it.
 > 
+
+### 4.1 Post-Upgrade Cleanup
+
+Release upgrades can pull in packages you didn't ask for and leave autostart entries behind. Review after each upgrade.
+
+**`xwaylandvideobridge`** — a helper that lets **X11 apps screen-share Wayland content** (Discord, Zoom, Teams, OBS running under XWayland). It's often pulled in during upgrades and autostarts with the session; on COSMIC it can show up as a stray/empty window at login. It's harmless, but if you don't want it:
+
+```bash
+# Identify it
+rpm -qi xwaylandvideobridge | head
+ls /etc/xdg/autostart/ | grep -i bridge
+
+# Option A — keep it, but stop the window from appearing at login
+mkdir -p ~/.config/autostart
+cp /etc/xdg/autostart/org.kde.xwaylandvideobridge.desktop ~/.config/autostart/ 2>/dev/null
+echo "Hidden=true" >> ~/.config/autostart/org.kde.xwaylandvideobridge.desktop
+
+# Option B — remove it entirely (only if you don't screen-share from X11 apps)
+sudo dnf remove xwaylandvideobridge
+```
+
+> Native Wayland apps use COSMIC's own portal (`xdg-desktop-portal-cosmic`) and don't need the bridge — keep it only if you screen-share from an X11 app.
+> 
+
+**General post-upgrade checks:**
+
+```bash
+sudo dnf autoremove                     # drop orphaned deps the upgrade left behind
+ls /etc/xdg/autostart/                  # review what autostarts at login
+sudo dnf distro-sync                    # reconcile any version stragglers
+```
 
 ---
 
