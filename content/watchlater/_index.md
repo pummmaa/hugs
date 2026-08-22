@@ -17,3 +17,7 @@ Videos to watch when I have time.
 ## lightware
 
 - [hdmi-tpx-tx220-tpx-rx97-start-guide](https://www.youtube.com/watch?v=a5fD5YEM-RA&t=565s) — goes into details of each port and what they do (added 2026-08-14)
+
+## Networking
+
+- [https://www.youtube.com/watch?v=m8gV4YZoXUs](https://www.youtube.com/watch?v=m8gV4YZoXUs) — first pat of ccna from chuck academy (added 2026-08-22)
